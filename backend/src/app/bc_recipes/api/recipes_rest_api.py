@@ -4,12 +4,12 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from app.bc_recipes.domain.recipe import Recipe, RecipeDocument, RecipeStep
+from app.bc_recipes.domain.recipe import Recipe, RecipeAction, RecipeDocument
 from app.bc_recipes.service.exceptions import (
+    ActionNotFound,
     InvalidRecipe,
     OrderConflict,
     RecipeNotFound,
-    StepNotFound,
     UnsupportedVendor,
 )
 from app.bc_recipes.service.recipes_service import RecipesService
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/recipes")
 
 ERROR_RESPONSES = {
     404: {
-        "description": "Recipe or Step was not found.",
+        "description": "Recipe or Action was not found.",
         "content": {
             "application/json": {
                 "example": {"detail": {"code": "not_found", "message": "Recipe was not found."}}
@@ -27,30 +27,30 @@ ERROR_RESPONSES = {
         },
     },
     409: {
-        "description": "The requested Step ordering change conflicts with the current Recipe state.",
+        "description": "The requested Action ordering change conflicts with the current Recipe state.",
         "content": {
             "application/json": {
                 "example": {
                     "detail": {
                         "code": "order_conflict",
-                        "message": "The requested step position is outside the recipe.",
+                        "message": "The requested action position is outside the recipe.",
                     }
                 }
             }
         },
     },
     422: {
-        "description": "Recipe or Step payload is structurally valid JSON but violates domain rules.",
+        "description": "Recipe or Action payload is structurally valid JSON but violates domain rules.",
         "content": {
             "application/json": {
                 "example": {
                     "detail": {
                         "code": "invalid_recipe",
-                        "message": "Recipe must contain at least one step.",
+                        "message": "Recipe must contain at least one action.",
                         "errors": [
                             {
-                                "path": "steps",
-                                "message": "Add at least one step before export or preview.",
+                                "path": "actions",
+                                "message": "Add at least one action before export or preview.",
                             }
                         ],
                     }
@@ -79,10 +79,10 @@ class RecipeUpdateRequest(BaseModel):
     )
 
 
-class MoveStepRequest(BaseModel):
+class MoveActionRequest(BaseModel):
     position: int = Field(
         ge=0,
-        description="Zero-based target position for the Step within the Recipe sequence.",
+        description="Zero-based target position for the Action within the Recipe sequence.",
         examples=[0],
     )
 
@@ -107,7 +107,7 @@ async def list_recipes(service: RecipesService = Depends(get_recipes_service)) -
     status_code=status.HTTP_201_CREATED,
     tags=["recipes"],
     summary="Create Recipe",
-    description="Create an empty Recipe. Steps are added through nested Step endpoints.",
+    description="Create an empty Recipe. Actions are added through nested Action endpoints.",
     operation_id="createRecipe",
     responses={201: {"description": "Recipe created."}},
 )
@@ -122,7 +122,7 @@ async def create_recipe(
     "/{recipe_id}",
     tags=["recipes"],
     summary="Get Recipe",
-    description="Return one Recipe with its ordered Steps.",
+    description="Return one Recipe with its ordered Action List.",
     operation_id="getRecipe",
     responses={404: ERROR_RESPONSES[404]},
 )
@@ -137,7 +137,7 @@ async def get_recipe(
     "/{recipe_id}",
     tags=["recipes"],
     summary="Rename Recipe",
-    description="Update the technician-facing Recipe name without changing its Steps.",
+    description="Update the technician-facing Recipe name without changing its Actions.",
     operation_id="renameRecipe",
     responses={404: ERROR_RESPONSES[404]},
 )
@@ -154,7 +154,7 @@ async def update_recipe(
     status_code=status.HTTP_204_NO_CONTENT,
     tags=["recipes"],
     summary="Delete Recipe",
-    description="Delete a Recipe and its Steps.",
+    description="Delete a Recipe and its Action List.",
     operation_id="deleteRecipe",
     responses={204: {"description": "Recipe deleted."}, 404: ERROR_RESPONSES[404]},
 )
@@ -166,86 +166,87 @@ async def delete_recipe(
 
 
 @router.post(
-    "/{recipe_id}/steps",
+    "/{recipe_id}/actions",
     status_code=status.HTTP_201_CREATED,
     tags=["recipes"],
-    summary="Add Step",
+    summary="Add Action",
     description=(
-        "Append a Take Image or Unscrewing Step to a Recipe. "
-        "The backend assigns a fresh Step ID and validates type-specific fields."
+        "Append a Take Image or Unscrewing Action to a Recipe. The Action envelope "
+        "contains `id`, `type`, and type-specific `parameters`; the backend assigns "
+        "a fresh Action ID and validates the parameters fail-fast."
     ),
-    operation_id="addRecipeStep",
-    responses={201: {"description": "Step added; full Recipe returned."}, 404: ERROR_RESPONSES[404], 422: ERROR_RESPONSES[422]},
+    operation_id="addRecipeAction",
+    responses={201: {"description": "Action added; full Recipe returned."}, 404: ERROR_RESPONSES[404], 422: ERROR_RESPONSES[422]},
 )
-async def add_step(
+async def add_action(
     recipe_id: UUID,
-    step: RecipeStep = Body(
+    action: RecipeAction = Body(
         ...,
-        description="Step payload. Use `type` to choose `take_image` or `unscrewing`.",
+        description="Action payload. Use `type` to choose `take_image` or `unscrewing`; put type-specific fields under `parameters`.",
     ),
     service: RecipesService = Depends(get_recipes_service),
 ) -> Recipe:
-    return _call(lambda: service.add_step(recipe_id, step))
+    return _call(lambda: service.add_action(recipe_id, action))
 
 
 @router.patch(
-    "/{recipe_id}/steps/{step_id}",
+    "/{recipe_id}/actions/{action_id}",
     tags=["recipes"],
-    summary="Replace Step",
-    description="Replace an existing Step while preserving its Step ID and position.",
-    operation_id="replaceRecipeStep",
+    summary="Replace Action",
+    description="Replace an existing Action while preserving its Action ID and position in the Action List.",
+    operation_id="replaceRecipeAction",
     responses={404: ERROR_RESPONSES[404], 422: ERROR_RESPONSES[422]},
 )
-async def update_step(
+async def update_action(
     recipe_id: UUID,
-    step_id: UUID,
-    step: RecipeStep = Body(
+    action_id: UUID,
+    action: RecipeAction = Body(
         ...,
-        description="Replacement Step payload. The path Step ID remains authoritative.",
+        description="Replacement Action payload. The path Action ID remains authoritative.",
     ),
     service: RecipesService = Depends(get_recipes_service),
 ) -> Recipe:
-    return _call(lambda: service.update_step(recipe_id, step_id, step))
+    return _call(lambda: service.update_action(recipe_id, action_id, action))
 
 
 @router.delete(
-    "/{recipe_id}/steps/{step_id}",
+    "/{recipe_id}/actions/{action_id}",
     tags=["recipes"],
-    summary="Remove Step",
-    description="Remove one Step from a Recipe and return the updated Recipe.",
-    operation_id="removeRecipeStep",
+    summary="Remove Action",
+    description="Remove one Action from a Recipe and return the updated Recipe.",
+    operation_id="removeRecipeAction",
     responses={404: ERROR_RESPONSES[404]},
 )
-async def delete_step(
+async def delete_action(
     recipe_id: UUID,
-    step_id: UUID,
+    action_id: UUID,
     service: RecipesService = Depends(get_recipes_service),
 ) -> Recipe:
-    return _call(lambda: service.delete_step(recipe_id, step_id))
+    return _call(lambda: service.delete_action(recipe_id, action_id))
 
 
 @router.post(
-    "/{recipe_id}/steps/{step_id}/move",
+    "/{recipe_id}/actions/{action_id}/move",
     tags=["recipes"],
-    summary="Move Step",
-    description="Move a Step to a zero-based position. The backend owns ordering invariants.",
-    operation_id="moveRecipeStep",
+    summary="Move Action",
+    description="Move an Action to a zero-based position. The backend owns ordering invariants for the Action List.",
+    operation_id="moveRecipeAction",
     responses={404: ERROR_RESPONSES[404], 409: ERROR_RESPONSES[409]},
 )
-async def move_step(
+async def move_action(
     recipe_id: UUID,
-    step_id: UUID,
-    request: MoveStepRequest,
+    action_id: UUID,
+    request: MoveActionRequest,
     service: RecipesService = Depends(get_recipes_service),
 ) -> Recipe:
-    return _call(lambda: service.move_step(recipe_id, step_id, request.position))
+    return _call(lambda: service.move_action(recipe_id, action_id, request.position))
 
 
 @router.post(
     "/{recipe_id}/validate",
     tags=["recipe validation"],
     summary="Validate Recipe",
-    description="Validate that a Recipe is ready for export or robot command preview.",
+    description="Validate that a Recipe contains a well-formed Action List ready for export or robot command preview.",
     operation_id="validateRecipe",
     responses={404: ERROR_RESPONSES[404], 422: ERROR_RESPONSES[422]},
 )
@@ -261,7 +262,11 @@ async def validate_recipe(
     "/{recipe_id}/export",
     tags=["recipe exchange"],
     summary="Export Recipe JSON",
-    description="Return canonical vendor-neutral Recipe JSON for review, storage, or later import.",
+    description=(
+        "Return canonical vendor-neutral Recipe JSON for review, storage, or later import. "
+        "The exported Recipe uses the shared Action Model: ordered `actions`, each with "
+        "`id`, `type`, and `parameters`."
+    ),
     operation_id="exportRecipeJson",
     responses={404: ERROR_RESPONSES[404], 422: ERROR_RESPONSES[422]},
 )
@@ -277,7 +282,7 @@ async def export_recipe(
     status_code=status.HTTP_201_CREATED,
     tags=["recipe exchange"],
     summary="Import Recipe JSON",
-    description="Create a new editable Recipe from canonical Recipe JSON.",
+    description="Create a new editable Recipe from canonical Recipe JSON using the Action Model.",
     operation_id="importRecipeJson",
     responses={201: {"description": "Recipe imported."}, 422: ERROR_RESPONSES[422]},
 )
@@ -293,7 +298,7 @@ async def import_recipe(
     tags=["robot adapters"],
     summary="Preview Robot Commands",
     description=(
-        "Translate a valid Recipe into a vendor-specific command plan without executing it. "
+        "Translate a valid Recipe Action List into a vendor-specific command plan without executing it. "
         "Supported vendors are `company_a` and `company_b`."
     ),
     operation_id="previewRobotCommands",
@@ -316,7 +321,7 @@ def _call(operation):
         return operation()
     except RecipeNotFound as exc:
         raise _api_error(status.HTTP_404_NOT_FOUND, "not_found", str(exc)) from exc
-    except StepNotFound as exc:
+    except ActionNotFound as exc:
         raise _api_error(status.HTTP_404_NOT_FOUND, "not_found", str(exc)) from exc
     except OrderConflict as exc:
         raise _api_error(status.HTTP_409_CONFLICT, "order_conflict", str(exc)) from exc

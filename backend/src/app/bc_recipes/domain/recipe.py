@@ -12,12 +12,11 @@ class Coordinate(BaseModel):
     y: int = Field(ge=0, description="Non-negative Y coordinate in image or robot workspace units.")
 
 
-class TakeImageStep(BaseModel):
+class TakeImageParameters(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         json_schema_extra={
             "example": {
-                "type": "take_image",
                 "include_pointcloud": True,
                 "image_scope": "section",
                 "center": {"x": 120, "y": 80},
@@ -25,14 +24,6 @@ class TakeImageStep(BaseModel):
         },
     )
 
-    id: UUID = Field(
-        default_factory=uuid4,
-        description="Stable Step identifier. Preserved during import/export when provided.",
-    )
-    type: Literal["take_image"] = Field(
-        default="take_image",
-        description="Step discriminator for image capture.",
-    )
     include_pointcloud: bool = Field(
         default=False,
         description="Whether the robot should capture pointcloud/depth data with the image.",
@@ -46,7 +37,7 @@ class TakeImageStep(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_center(self) -> "TakeImageStep":
+    def validate_center(self) -> "TakeImageParameters":
         if self.image_scope == "section" and self.center is None:
             raise ValueError("Section images require center coordinates.")
         if self.image_scope == "full_battery" and self.center is not None:
@@ -54,26 +45,17 @@ class TakeImageStep(BaseModel):
         return self
 
 
-class UnscrewingStep(BaseModel):
+class UnscrewingParameters(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         json_schema_extra={
             "example": {
-                "type": "unscrewing",
                 "mode": "specific",
                 "target": {"x": 120, "y": 80},
             }
         },
     )
 
-    id: UUID = Field(
-        default_factory=uuid4,
-        description="Stable Step identifier. Preserved during import/export when provided.",
-    )
-    type: Literal["unscrewing"] = Field(
-        default="unscrewing",
-        description="Step discriminator for screw removal.",
-    )
     mode: Literal["automatic", "specific"] = Field(
         description="Automatic unscrewing lets the robot choose targets; specific unscrewing requires target coordinates.",
     )
@@ -83,7 +65,7 @@ class UnscrewingStep(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_target(self) -> "UnscrewingStep":
+    def validate_target(self) -> "UnscrewingParameters":
         if self.mode == "specific" and self.target is None:
             raise ValueError("Specific unscrewing requires target coordinates.")
         if self.mode == "automatic" and self.target is not None:
@@ -91,7 +73,64 @@ class UnscrewingStep(BaseModel):
         return self
 
 
-RecipeStep = Annotated[TakeImageStep | UnscrewingStep, Field(discriminator="type")]
+class TakeImageAction(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "id": "11111111-1111-1111-1111-111111111111",
+                "type": "take_image",
+                "parameters": {
+                    "include_pointcloud": True,
+                    "image_scope": "section",
+                    "center": {"x": 120, "y": 80},
+                },
+            }
+        },
+    )
+
+    id: UUID = Field(
+        default_factory=uuid4,
+        description="Stable Action identifier. Preserved during import/export when provided.",
+    )
+    type: Literal["take_image"] = Field(
+        default="take_image",
+        description="Action discriminator for image capture.",
+    )
+    parameters: TakeImageParameters = Field(
+        description="Take Image Action parameters, validated independently from the Action envelope.",
+    )
+
+
+class UnscrewingAction(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "id": "22222222-2222-2222-2222-222222222222",
+                "type": "unscrewing",
+                "parameters": {
+                    "mode": "specific",
+                    "target": {"x": 120, "y": 80},
+                },
+            }
+        },
+    )
+
+    id: UUID = Field(
+        default_factory=uuid4,
+        description="Stable Action identifier. Preserved during import/export when provided.",
+    )
+    type: Literal["unscrewing"] = Field(
+        default="unscrewing",
+        description="Action discriminator for screw removal.",
+    )
+    parameters: UnscrewingParameters = Field(
+        description="Unscrewing Action parameters, validated independently from the Action envelope.",
+    )
+
+
+RecipeAction = Annotated[TakeImageAction | UnscrewingAction, Field(discriminator="type")]
 
 
 class RecipeDocument(BaseModel):
@@ -101,19 +140,23 @@ class RecipeDocument(BaseModel):
             "example": {
                 "schema_version": "1.0",
                 "name": "Battery pack screw removal",
-                "steps": [
+                "actions": [
                     {
                         "id": "11111111-1111-1111-1111-111111111111",
                         "type": "take_image",
-                        "include_pointcloud": True,
-                        "image_scope": "section",
-                        "center": {"x": 120, "y": 80},
+                        "parameters": {
+                            "include_pointcloud": True,
+                            "image_scope": "section",
+                            "center": {"x": 120, "y": 80},
+                        },
                     },
                     {
                         "id": "22222222-2222-2222-2222-222222222222",
                         "type": "unscrewing",
-                        "mode": "specific",
-                        "target": {"x": 120, "y": 80},
+                        "parameters": {
+                            "mode": "specific",
+                            "target": {"x": 120, "y": 80},
+                        },
                     },
                 ],
             }
@@ -129,9 +172,9 @@ class RecipeDocument(BaseModel):
         max_length=120,
         description="Technician-facing Recipe name.",
     )
-    steps: list[RecipeStep] = Field(
+    actions: list[RecipeAction] = Field(
         default_factory=list,
-        description="Ordered Steps. List order is the intended recipe sequence.",
+        description="Ordered Actions. List order is the intended recipe sequence.",
     )
 
 

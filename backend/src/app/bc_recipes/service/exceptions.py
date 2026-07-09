@@ -22,7 +22,7 @@ class RecipeNotFound(RecipeError):
     pass
 
 
-class StepNotFound(RecipeError):
+class ActionNotFound(RecipeError):
     pass
 
 
