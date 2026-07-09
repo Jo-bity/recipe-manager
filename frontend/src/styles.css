@@ -1,323 +1,84 @@
 :root {
   color-scheme: light;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f5f7f9;
-  color: #18212b;
-}
-
-* {
-  box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  background: var(--bs-tertiary-bg);
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
+.navbar {
+  z-index: 1020;
 }
 
-button {
-  border: 1px solid #1f4f5f;
-  background: #1f4f5f;
-  color: white;
-  border-radius: 6px;
-  padding: 0.6rem 0.8rem;
-  cursor: pointer;
+.workspace-card {
+  min-height: calc(100vh - 8rem);
 }
 
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
+.recipe-list {
+  max-height: calc(100vh - 16rem);
+  overflow: auto;
 }
 
-input,
-select,
-textarea {
-  width: 100%;
-  border: 1px solid #bac5cf;
-  border-radius: 6px;
-  padding: 0.55rem 0.65rem;
-  background: white;
-  color: #18212b;
-}
-
-label {
-  display: grid;
-  gap: 0.35rem;
-  color: #34424f;
-  font-size: 0.9rem;
-}
-
-fieldset {
-  border: 1px solid #d8e0e6;
-  border-radius: 8px;
-  margin: 0;
-  padding: 0.9rem;
-}
-
-legend {
-  color: #18212b;
-  font-weight: 700;
-  padding: 0 0.3rem;
-}
-
-h1,
-h2,
-h3,
-p {
-  margin-top: 0;
-}
-
-.shell {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 1.5rem;
-}
-
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
+.workflow-guide .workflow-step {
   align-items: center;
-  margin-bottom: 1rem;
-}
-
-.topbar h1 {
-  margin-bottom: 0.25rem;
-}
-
-.topbar a {
-  color: #1f4f5f;
-  font-weight: 700;
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  gap: 1rem;
-}
-
-.panel {
-  background: white;
-  border: 1px solid #d8e0e6;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.sidebar {
-  align-self: start;
-}
-
-.stack,
-.setup-form,
-.configuration-form,
-.workspace-page {
-  display: grid;
-  gap: 0.8rem;
-}
-
-.workspace {
-  display: grid;
-  gap: 1rem;
-}
-
-.workspace-header,
-.actions,
-.preview-actions,
-.action-row,
-.recipe-row,
-.add-actions {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(13, 110, 253, 0.16);
+  border-radius: var(--bs-border-radius);
   display: flex;
   gap: 0.6rem;
-  align-items: center;
+  min-height: 3rem;
+  padding: 0.7rem 0.8rem;
 }
 
-.workspace-header,
-.action-row,
-.recipe-row {
-  justify-content: space-between;
-}
-
-.tabs {
-  display: flex;
-  gap: 0.4rem;
-  border-bottom: 1px solid #d8e0e6;
-  padding-bottom: 0.65rem;
-}
-
-.tabs button,
-.segmented-control button {
+.workflow-guide .workflow-step.complete {
   background: white;
-  color: #1f4f5f;
+  border-color: rgba(13, 110, 253, 0.36);
 }
 
-.tabs button.active,
-.segmented-control button.active {
-  background: #1f4f5f;
-  color: white;
+.action-list .list-group-item {
+  border-radius: var(--bs-border-radius);
+  margin-bottom: 0.6rem;
 }
 
-.editor-grid {
-  display: grid;
-  grid-template-columns: minmax(220px, 0.85fr) minmax(280px, 1fr) minmax(320px, 1.25fr);
-  gap: 1rem;
-  align-items: start;
-}
-
-.setup-section,
-.action-list-section,
-.configuration-section,
-.json-grid section,
-.workspace-page {
-  border: 1px solid #d8e0e6;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.section-heading {
-  margin-bottom: 0.9rem;
-}
-
-.section-heading span {
-  color: #697783;
-  display: block;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-.section-heading h3 {
+.action-list .list-group-item:last-child {
   margin-bottom: 0;
-}
-
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
-  margin-top: 0.8rem;
-}
-
-.list,
-.action-list {
-  display: grid;
-  gap: 0.6rem;
-  margin-top: 1rem;
-}
-
-.recipe-row,
-.action-row {
-  border: 1px solid #d8e0e6;
-  border-radius: 6px;
-  padding: 0.7rem;
-}
-
-.recipe-row {
-  width: 100%;
-  background: white;
-  color: #18212b;
-}
-
-.recipe-row.active,
-.action-row.selected {
-  border-color: #1f4f5f;
-  background: #edf8fa;
 }
 
 .action-select {
-  min-width: 0;
-  padding: 0;
   border: 0;
-  background: transparent;
-  color: #18212b;
-  text-align: left;
-}
-
-.action-select strong,
-.action-select span {
   display: block;
+  padding: 0;
+  text-align: left;
+  width: 100%;
 }
 
-.action-select span {
-  color: #5b6975;
+.action-select:hover,
+.action-select:focus {
+  background: transparent;
+}
+
+.segmented-control .btn {
+  min-height: 2.75rem;
+}
+
+.code-input,
+.code-output {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 0.88rem;
 }
 
-.icon-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  justify-content: flex-end;
-}
-
-.icon-actions button {
-  min-width: 2.2rem;
-  padding: 0.45rem;
-}
-
-.add-actions {
-  flex-wrap: wrap;
-}
-
-.segmented-control {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.45rem;
-}
-
-.field-note,
-.empty-state {
-  color: #5b6975;
-  font-size: 0.9rem;
-  margin-bottom: 0;
-}
-
-.json-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.json-grid section {
-  display: grid;
-  gap: 0.8rem;
-}
-
-pre {
+.code-output {
+  background: #101820;
+  border-radius: var(--bs-border-radius);
+  color: #eef7fb;
   min-height: 18rem;
   overflow: auto;
-  background: #101820;
-  color: #eef7fb;
-  border-radius: 6px;
   padding: 1rem;
 }
 
-@media (max-width: 1020px) {
-  .editor-grid,
-  .json-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 860px) {
-  .layout,
-  .field-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .workspace-header,
-  .topbar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .tabs,
-  .actions,
-  .preview-actions {
-    flex-wrap: wrap;
+@media (min-width: 1400px) {
+  .container-fluid {
+    max-width: 1520px;
   }
 }
