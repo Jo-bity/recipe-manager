@@ -1,5 +1,6 @@
 import React, { FormEvent, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles.css";
 
 type Coordinate = {
@@ -275,107 +276,131 @@ function App() {
   }
 
   return (
-    <main className="shell">
-      <section className="topbar">
-        <div>
-          <h1>r3-recipe-manager</h1>
-          <p>Create technician-safe robot recipes and export vendor-neutral Recipe JSON.</p>
+    <main className="app-shell bg-body-tertiary min-vh-100">
+      <nav className="navbar navbar-expand bg-white border-bottom sticky-top">
+        <div className="container-fluid px-4">
+          <div>
+            <span className="navbar-brand mb-0 h1">r3-recipe-manager</span>
+            <span className="text-secondary small d-block">Vendor-neutral robot recipes</span>
+          </div>
+          <a className="btn btn-outline-primary btn-sm" href={API_DOCS_URL} target="_blank" rel="noreferrer">
+            API docs
+          </a>
         </div>
-        <a href={API_DOCS_URL} target="_blank" rel="noreferrer">
-          API docs
-        </a>
-      </section>
+      </nav>
 
-      <section className="layout">
-        <aside className="panel sidebar">
-          <h2>Recipes</h2>
-          <form className="stack" onSubmit={createRecipe}>
-            <label>
-              Recipe name
-              <input
-                required
-                maxLength={120}
-                placeholder="Battery screw removal"
-                value={recipeName}
-                onChange={(event) => setRecipeName(event.target.value)}
-              />
-            </label>
-            <button type="submit">Create recipe</button>
-          </form>
-          <div className="list">
-            {recipes.map((recipe) => (
-              <button
-                className={`recipe-row ${recipe.id === activeRecipeId ? "active" : ""}`}
-                key={recipe.id}
-                onClick={() => {
-                  setActiveRecipeId(recipe.id);
-                  setSelectedActionId(recipe.actions[0]?.id ?? null);
-                }}
-              >
-                <span>{recipe.name}</span>
-                <span>{recipe.actions.length} actions</span>
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        <section className="panel workspace">
-          <div className="workspace-header">
-            <div>
-              <h2>{activeRecipe?.name ?? "Select a recipe"}</h2>
-              <p>
-                {activeRecipe
-                  ? `${activeRecipe.actions.length} ordered actions`
-                  : "Create or select a recipe to begin."}
-              </p>
+      <div className="container-fluid p-4">
+        <div className="row g-4">
+          <aside className="col-12 col-xl-3">
+            <div className="card shadow-sm">
+              <div className="card-header bg-white">
+                <h2 className="h5 mb-0">Recipes</h2>
+              </div>
+              <div className="card-body">
+                <form className="vstack gap-2" onSubmit={createRecipe}>
+                  <label className="form-label mb-0" htmlFor="new-recipe-name">
+                    New recipe
+                  </label>
+                  <input
+                    id="new-recipe-name"
+                    className="form-control"
+                    required
+                    maxLength={120}
+                    placeholder="Battery screw removal"
+                    value={recipeName}
+                    onChange={(event) => setRecipeName(event.target.value)}
+                  />
+                  <button className="btn btn-primary" type="submit">
+                    Create recipe
+                  </button>
+                </form>
+              </div>
+              <div className="list-group list-group-flush recipe-list">
+                {recipes.length > 0 ? (
+                  recipes.map((recipe) => (
+                    <button
+                      className={`list-group-item list-group-item-action ${recipe.id === activeRecipeId ? "active" : ""}`}
+                      key={recipe.id}
+                      onClick={() => {
+                        setActiveRecipeId(recipe.id);
+                        setSelectedActionId(recipe.actions[0]?.id ?? null);
+                      }}
+                    >
+                      <span className="d-block fw-semibold text-truncate">{recipe.name}</span>
+                      <span className="badge text-bg-light mt-2">{recipe.actions.length} actions</span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="list-group-item text-secondary">No recipes yet.</div>
+                )}
+              </div>
             </div>
-            <div className="actions">
-              <button disabled={!activeRecipe} onClick={validateRecipe}>
-                Validate
-              </button>
-              <button disabled={!activeRecipe} onClick={exportRecipe}>
-                Export JSON
-              </button>
+          </aside>
+
+          <section className="col-12 col-xl-9">
+            <div className="card shadow-sm workspace-card">
+              <div className="card-header bg-white">
+                <div className="d-flex flex-column flex-lg-row gap-3 justify-content-between align-items-lg-center">
+                  <div>
+                    <h2 className="h4 mb-1">{activeRecipe?.name ?? "Select a recipe"}</h2>
+                    <span className="text-secondary">
+                      {activeRecipe ? `${activeRecipe.actions.length} ordered actions` : "Create or select a recipe to begin."}
+                    </span>
+                  </div>
+                  <div className="btn-toolbar gap-2">
+                    <button className="btn btn-outline-success" disabled={!activeRecipe} onClick={validateRecipe}>
+                      Validate
+                    </button>
+                    <button className="btn btn-outline-primary" disabled={!activeRecipe} onClick={exportRecipe}>
+                      Export JSON
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card-body">
+                <ul className="nav nav-pills mb-4" aria-label="Recipe workspace">
+                  <li className="nav-item">
+                    <button className={`nav-link ${workspaceView === "editor" ? "active" : ""}`} onClick={() => setWorkspaceView("editor")}>
+                      Editor
+                    </button>
+                  </li>
+                  <li className="nav-item">
+                    <button className={`nav-link ${workspaceView === "preview" ? "active" : ""}`} onClick={() => setWorkspaceView("preview")}>
+                      Adapter Preview
+                    </button>
+                  </li>
+                  <li className="nav-item">
+                    <button className={`nav-link ${workspaceView === "json" ? "active" : ""}`} onClick={() => setWorkspaceView("json")}>
+                      Recipe JSON
+                    </button>
+                  </li>
+                </ul>
+
+                {workspaceView === "editor" ? (
+                  <EditorView
+                    activeRecipe={activeRecipe}
+                    setupName={setupName}
+                    selectedAction={selectedAction}
+                    selectedActionId={selectedAction?.id ?? null}
+                    onSetupNameChange={setSetupName}
+                    onRenameRecipe={renameRecipe}
+                    onAddAction={addAction}
+                    onSelectAction={setSelectedActionId}
+                    onMoveAction={moveAction}
+                    onRemoveAction={removeAction}
+                    onUpdateAction={updateAction}
+                  />
+                ) : null}
+
+                {workspaceView === "preview" ? <PreviewView activeRecipe={activeRecipe} output={output} onPreviewCommands={previewCommands} /> : null}
+
+                {workspaceView === "json" ? <JsonView importJson={importJson} output={output} onImportJsonChange={setImportJson} onImportRecipe={importRecipe} /> : null}
+              </div>
             </div>
-          </div>
-
-          <nav className="tabs" aria-label="Recipe workspace">
-            <button className={workspaceView === "editor" ? "active" : ""} onClick={() => setWorkspaceView("editor")}>
-              Editor
-            </button>
-            <button className={workspaceView === "preview" ? "active" : ""} onClick={() => setWorkspaceView("preview")}>
-              Adapter Preview
-            </button>
-            <button className={workspaceView === "json" ? "active" : ""} onClick={() => setWorkspaceView("json")}>
-              Recipe JSON
-            </button>
-          </nav>
-
-          {workspaceView === "editor" ? (
-            <EditorView
-              activeRecipe={activeRecipe}
-              setupName={setupName}
-              selectedAction={selectedAction}
-              selectedActionId={selectedAction?.id ?? null}
-              onSetupNameChange={setSetupName}
-              onRenameRecipe={renameRecipe}
-              onAddAction={addAction}
-              onSelectAction={setSelectedActionId}
-              onMoveAction={moveAction}
-              onRemoveAction={removeAction}
-              onUpdateAction={updateAction}
-            />
-          ) : null}
-
-          {workspaceView === "preview" ? (
-            <PreviewView activeRecipe={activeRecipe} output={output} onPreviewCommands={previewCommands} />
-          ) : null}
-
-          {workspaceView === "json" ? (
-            <JsonView importJson={importJson} output={output} onImportJsonChange={setImportJson} onImportRecipe={importRecipe} />
-          ) : null}
-        </section>
-      </section>
+          </section>
+        </div>
+      </div>
     </main>
   );
 }
@@ -406,73 +431,122 @@ function EditorView({
   onUpdateAction: (action: RecipeAction) => void;
 }) {
   return (
-    <div className="editor-grid">
-      <section className="setup-section">
-        <SectionHeading eyebrow="Setup" title="Recipe purpose" />
-        <form className="setup-form" onSubmit={onRenameRecipe}>
-          <label>
-            Recipe name
-            <input
-              required
-              maxLength={120}
-              disabled={!activeRecipe}
-              value={setupName}
-              onChange={(event) => onSetupNameChange(event.target.value)}
-            />
-          </label>
-          <label>
-            Battery layout
-            <input disabled placeholder="Outlook: pack variant or layout reference" />
-          </label>
-          <label>
-            Process constraint
-            <input disabled placeholder="Outlook: station, tool, or customer constraint" />
-          </label>
-          <button disabled={!activeRecipe} type="submit">
-            Save setup
-          </button>
-        </form>
-      </section>
+    <div className="vstack gap-4">
+      <WorkflowGuide activeRecipe={activeRecipe} selectedAction={selectedAction} />
 
-      <section className="action-list-section">
-        <SectionHeading eyebrow="Action List" title="Robot procedure" />
-        <div className="add-actions">
-          <button disabled={!activeRecipe} onClick={() => onAddAction("take_image")}>
-            Add Take Image
-          </button>
-          <button disabled={!activeRecipe} onClick={() => onAddAction("unscrewing")}>
-            Add Unscrewing
-          </button>
-        </div>
-        <div className="action-list">
-          {activeRecipe ? (
-            activeRecipe.actions.length > 0 ? (
-              activeRecipe.actions.map((action, index) => (
-                <ActionRow
-                  key={action.id}
-                  index={index}
-                  action={action}
-                  selected={action.id === selectedActionId}
-                  isFirst={index === 0}
-                  isLast={index === activeRecipe.actions.length - 1}
-                  onSelect={onSelectAction}
-                  onMove={onMoveAction}
-                  onRemove={onRemoveAction}
-                />
-              ))
-            ) : (
-              <p className="empty-state">No actions yet.</p>
-            )
-          ) : (
-            <p className="empty-state">No recipe selected.</p>
-          )}
-        </div>
-      </section>
+      <div className="row g-4 align-items-start">
+        <section className="col-12 col-xxl-4">
+          <div className="card h-100 border-primary-subtle">
+            <SectionHeading number="1" title="Setup" badge="Recipe purpose" />
+            <div className="card-body">
+              <form className="vstack gap-3" onSubmit={onRenameRecipe}>
+                <div>
+                  <label className="form-label" htmlFor="setup-name">
+                    Recipe name
+                  </label>
+                  <input
+                    id="setup-name"
+                    className="form-control"
+                    required
+                    maxLength={120}
+                    disabled={!activeRecipe}
+                    value={setupName}
+                    onChange={(event) => onSetupNameChange(event.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" htmlFor="battery-layout">
+                    Battery layout
+                  </label>
+                  <input id="battery-layout" className="form-control" disabled placeholder="Pack variant or layout reference" />
+                </div>
+                <div>
+                  <label className="form-label" htmlFor="process-constraint">
+                    Process constraint
+                  </label>
+                  <input id="process-constraint" className="form-control" disabled placeholder="Station, tool, or customer constraint" />
+                </div>
+                <button className="btn btn-primary" disabled={!activeRecipe} type="submit">
+                  Save setup
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
 
-      <section className="configuration-section">
-        <SectionHeading eyebrow="Action Configuration" title={selectedAction ? actionLabel(selectedAction) : "Select an action"} />
-        {selectedAction ? <ActionConfiguration action={selectedAction} onUpdate={onUpdateAction} /> : <p className="empty-state">Add or select an action to configure it.</p>}
-      </section>
+        <section className="col-12 col-xxl-4">
+          <div className="card h-100 border-primary-subtle">
+            <SectionHeading number="2" title="Action List" badge="Robot procedure" />
+            <div className="card-body">
+              <div className="btn-group w-100 mb-3" role="group" aria-label="Add action">
+                <button className="btn btn-outline-primary" disabled={!activeRecipe} onClick={() => onAddAction("take_image")}>
+                  Take Image
+                </button>
+                <button className="btn btn-outline-primary" disabled={!activeRecipe} onClick={() => onAddAction("unscrewing")}>
+                  Unscrewing
+                </button>
+              </div>
+              <div className="list-group action-list">
+                {activeRecipe ? (
+                  activeRecipe.actions.length > 0 ? (
+                    activeRecipe.actions.map((action, index) => (
+                      <ActionRow
+                        key={action.id}
+                        index={index}
+                        action={action}
+                        selected={action.id === selectedActionId}
+                        isFirst={index === 0}
+                        isLast={index === activeRecipe.actions.length - 1}
+                        onSelect={onSelectAction}
+                        onMove={onMoveAction}
+                        onRemove={onRemoveAction}
+                      />
+                    ))
+                  ) : (
+                    <EmptyState label="No actions yet." />
+                  )
+                ) : (
+                  <EmptyState label="No recipe selected." />
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="col-12 col-xxl-4">
+          <div className="card h-100 border-primary-subtle">
+            <SectionHeading number="3" title="Action Configuration" badge={selectedAction ? actionLabel(selectedAction) : "Select action"} />
+            <div className="card-body">
+              {selectedAction ? <ActionConfiguration action={selectedAction} onUpdate={onUpdateAction} /> : <EmptyState label="Add or select an action to configure it." />}
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function WorkflowGuide({ activeRecipe, selectedAction }: { activeRecipe: Recipe | null; selectedAction: RecipeAction | null }) {
+  const items = [
+    { label: "Setup", done: Boolean(activeRecipe?.name) },
+    { label: "Actions", done: Boolean(activeRecipe && activeRecipe.actions.length > 0) },
+    { label: "Configure", done: Boolean(selectedAction) },
+  ];
+
+  return (
+    <div className="card bg-primary-subtle border-0 workflow-guide">
+      <div className="card-body py-3">
+        <div className="row g-2">
+          {items.map((item, index) => (
+            <div className="col-12 col-md-4" key={item.label}>
+              <div className={`workflow-step ${item.done ? "complete" : ""}`}>
+                <span className="badge rounded-pill text-bg-primary">{index + 1}</span>
+                <span className="fw-semibold">{item.label}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -487,17 +561,19 @@ function PreviewView({
   onPreviewCommands: (vendor: "company_a" | "company_b") => void;
 }) {
   return (
-    <div className="workspace-page">
-      <SectionHeading eyebrow="Adapter Preview" title="Vendor command plan" />
-      <div className="preview-actions">
-        <button disabled={!activeRecipe} onClick={() => onPreviewCommands("company_a")}>
-          Company A
-        </button>
-        <button disabled={!activeRecipe} onClick={() => onPreviewCommands("company_b")}>
-          Company B
-        </button>
+    <div className="card border-primary-subtle">
+      <SectionHeading number="4" title="Adapter Preview" badge="Command plan" />
+      <div className="card-body">
+        <div className="btn-group mb-3" role="group" aria-label="Vendor preview">
+          <button className="btn btn-outline-primary" disabled={!activeRecipe} onClick={() => onPreviewCommands("company_a")}>
+            Company A
+          </button>
+          <button className="btn btn-outline-primary" disabled={!activeRecipe} onClick={() => onPreviewCommands("company_b")}>
+            Company B
+          </button>
+        </div>
+        <pre className="code-output mb-0">{output}</pre>
       </div>
-      <pre>{output}</pre>
     </div>
   );
 }
@@ -514,41 +590,59 @@ function JsonView({
   onImportRecipe: () => void;
 }) {
   return (
-    <div className="json-grid">
-      <section>
-        <SectionHeading eyebrow="Recipe JSON" title="Import" />
-        <textarea
-          rows={14}
-          spellCheck={false}
-          value={importJson}
-          onChange={(event) => onImportJsonChange(event.target.value)}
-        />
-        <button onClick={onImportRecipe}>Import</button>
+    <div className="row g-4">
+      <section className="col-12 col-lg-6">
+        <div className="card h-100 border-primary-subtle">
+          <SectionHeading number="5" title="Recipe JSON" badge="Import" />
+          <div className="card-body vstack gap-3">
+            <textarea
+              className="form-control code-input"
+              rows={14}
+              spellCheck={false}
+              value={importJson}
+              onChange={(event) => onImportJsonChange(event.target.value)}
+            />
+            <button className="btn btn-primary align-self-start" onClick={onImportRecipe}>
+              Import
+            </button>
+          </div>
+        </div>
       </section>
-      <section>
-        <SectionHeading eyebrow="Recipe JSON" title="Output" />
-        <pre>{output}</pre>
+      <section className="col-12 col-lg-6">
+        <div className="card h-100 border-primary-subtle">
+          <SectionHeading number="6" title="Output" badge="JSON" />
+          <div className="card-body">
+            <pre className="code-output mb-0">{output}</pre>
+          </div>
+        </div>
       </section>
     </div>
   );
 }
 
-function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
+function SectionHeading({ number, title, badge }: { number: string; title: string; badge: string }) {
   return (
-    <div className="section-heading">
-      <span>{eyebrow}</span>
-      <h3>{title}</h3>
+    <div className="card-header bg-white d-flex align-items-center justify-content-between gap-3">
+      <div className="d-flex align-items-center gap-2">
+        <span className="badge rounded-pill text-bg-primary">{number}</span>
+        <h3 className="h5 mb-0">{title}</h3>
+      </div>
+      <span className="badge text-bg-light">{badge}</span>
     </div>
   );
+}
+
+function EmptyState({ label }: { label: string }) {
+  return <div className="alert alert-light border mb-0 text-secondary">{label}</div>;
 }
 
 function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpdate: (action: RecipeAction) => void }) {
   if (action.type === "take_image") {
     const parameters = action.parameters;
     return (
-      <div className="configuration-form">
-        <fieldset>
-          <legend>Capture area</legend>
+      <div className="vstack gap-3">
+        <fieldset className="border rounded p-3">
+          <legend className="float-none w-auto px-2 fs-6 fw-semibold">Capture area</legend>
           <SegmentedControl
             value={parameters.image_scope}
             options={[
@@ -567,23 +661,27 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
             }}
           />
           {parameters.image_scope === "section" ? (
-            <div className="field-grid">
-              <CoordinateInput
-                label="Center X"
-                value={parameters.center?.x ?? 0}
-                onChange={(x) => onUpdate({ ...action, parameters: { ...parameters, center: { x, y: parameters.center?.y ?? 0 } } })}
-              />
-              <CoordinateInput
-                label="Center Y"
-                value={parameters.center?.y ?? 0}
-                onChange={(y) => onUpdate({ ...action, parameters: { ...parameters, center: { x: parameters.center?.x ?? 0, y } } })}
-              />
+            <div className="row g-3 mt-1">
+              <div className="col-6">
+                <CoordinateInput
+                  label="Center X"
+                  value={parameters.center?.x ?? 0}
+                  onChange={(x) => onUpdate({ ...action, parameters: { ...parameters, center: { x, y: parameters.center?.y ?? 0 } } })}
+                />
+              </div>
+              <div className="col-6">
+                <CoordinateInput
+                  label="Center Y"
+                  value={parameters.center?.y ?? 0}
+                  onChange={(y) => onUpdate({ ...action, parameters: { ...parameters, center: { x: parameters.center?.x ?? 0, y } } })}
+                />
+              </div>
             </div>
           ) : null}
         </fieldset>
 
-        <fieldset>
-          <legend>Depth data</legend>
+        <fieldset className="border rounded p-3">
+          <legend className="float-none w-auto px-2 fs-6 fw-semibold">Depth data</legend>
           <SegmentedControl
             value={parameters.include_pointcloud ? "pointcloud" : "image_only"}
             options={[
@@ -592,7 +690,6 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
             ]}
             onChange={(mode) => onUpdate({ ...action, parameters: { ...parameters, include_pointcloud: mode === "pointcloud" } })}
           />
-          <p className="field-note">Point cloud adds depth information for 3D part location.</p>
         </fieldset>
       </div>
     );
@@ -600,9 +697,9 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
 
   const parameters = action.parameters;
   return (
-    <div className="configuration-form">
-      <fieldset>
-        <legend>Targeting</legend>
+    <div className="vstack gap-3">
+      <fieldset className="border rounded p-3">
+        <legend className="float-none w-auto px-2 fs-6 fw-semibold">Targeting</legend>
         <SegmentedControl
           value={parameters.mode}
           options={[
@@ -621,17 +718,21 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
           }}
         />
         {parameters.mode === "specific" ? (
-          <div className="field-grid">
-            <CoordinateInput
-              label="Target X"
-              value={parameters.target?.x ?? 0}
-              onChange={(x) => onUpdate({ ...action, parameters: { ...parameters, target: { x, y: parameters.target?.y ?? 0 } } })}
-            />
-            <CoordinateInput
-              label="Target Y"
-              value={parameters.target?.y ?? 0}
-              onChange={(y) => onUpdate({ ...action, parameters: { ...parameters, target: { x: parameters.target?.x ?? 0, y } } })}
-            />
+          <div className="row g-3 mt-1">
+            <div className="col-6">
+              <CoordinateInput
+                label="Target X"
+                value={parameters.target?.x ?? 0}
+                onChange={(x) => onUpdate({ ...action, parameters: { ...parameters, target: { x, y: parameters.target?.y ?? 0 } } })}
+              />
+            </div>
+            <div className="col-6">
+              <CoordinateInput
+                label="Target Y"
+                value={parameters.target?.y ?? 0}
+                onChange={(y) => onUpdate({ ...action, parameters: { ...parameters, target: { x: parameters.target?.x ?? 0, y } } })}
+              />
+            </div>
           </div>
         ) : null}
       </fieldset>
@@ -649,10 +750,10 @@ function SegmentedControl<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <div className="segmented-control">
+    <div className="btn-group w-100 segmented-control" role="group">
       {options.map((option) => (
         <button
-          className={option.value === value ? "active" : ""}
+          className={`btn ${option.value === value ? "btn-primary" : "btn-outline-primary"}`}
           key={option.value}
           type="button"
           onClick={() => onChange(option.value)}
@@ -674,9 +775,9 @@ function CoordinateInput({
   onChange: (value: number) => void;
 }) {
   return (
-    <label>
+    <label className="form-label w-100">
       {label}
-      <input type="number" min={0} value={value} onChange={(event) => onChange(Number(event.target.value))} />
+      <input className="form-control mt-1" type="number" min={0} value={value} onChange={(event) => onChange(Number(event.target.value))} />
     </label>
   );
 }
@@ -701,21 +802,23 @@ function ActionRow({
   onRemove: (actionId: string) => void;
 }) {
   return (
-    <div className={`action-row ${selected ? "selected" : ""}`}>
-      <button className="action-select" onClick={() => onSelect(action.id)}>
-        <strong>
+    <div className={`list-group-item ${selected ? "active" : ""}`}>
+      <button className={`btn action-select ${selected ? "text-white" : "text-body"}`} onClick={() => onSelect(action.id)}>
+        <span className="fw-semibold d-block">
           {index + 1}. {actionLabel(action)}
-        </strong>
-        <span>{actionSummary(action)}</span>
+        </span>
+        <span className={`small d-block ${selected ? "text-white-50" : "text-secondary"}`}>{actionSummary(action)}</span>
       </button>
-      <div className="icon-actions">
-        <button disabled={isFirst} onClick={() => onMove(action.id, index - 1)}>
+      <div className="btn-group btn-group-sm mt-2" role="group" aria-label="Action ordering">
+        <button className="btn btn-outline-secondary" disabled={isFirst} onClick={() => onMove(action.id, index - 1)}>
           Up
         </button>
-        <button disabled={isLast} onClick={() => onMove(action.id, index + 1)}>
+        <button className="btn btn-outline-secondary" disabled={isLast} onClick={() => onMove(action.id, index + 1)}>
           Down
         </button>
-        <button onClick={() => onRemove(action.id)}>Remove</button>
+        <button className="btn btn-outline-danger" onClick={() => onRemove(action.id)}>
+          Remove
+        </button>
       </div>
     </div>
   );
