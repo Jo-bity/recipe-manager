@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "name": "Section rework layout B",
+  "actions": [
+    {
+      "id": "33333333-3333-3333-3333-333333333333",
+      "type": "take_image",
+      "parameters": {
+        "include_pointcloud": true,
+        "image_scope": "section",
+        "center": {
+          "x": 180,
+          "y": 95
+        }
+      }
+    },
+    {
+      "id": "44444444-4444-4444-4444-444444444444",
+      "type": "unscrewing",
+      "parameters": {
+        "mode": "specific",
+        "target": {
+          "x": 176,
+          "y": 102
+        }
+      }
+    },
+    {
+      "id": "55555555-5555-5555-5555-555555555555",
+      "type": "take_image",
+      "parameters": {
+        "include_pointcloud": false,
+        "image_scope": "section",
+        "center": {
+          "x": 176,
+          "y": 102
+        }
+      }
+    }
+  ]
+}

@@ -14,6 +14,15 @@ API-first MVP for creating technician-safe robot recipes, exporting vendor-neutr
 6. Use **Recipe JSON** to export/import the vendor-neutral Recipe representation.
 7. Use **Adapter Preview** to inspect how the same Recipe maps to Company A or Company B robot commands without executing robot movement.
 
+## Sample data
+
+Importable Recipe JSON examples live in `sample-data/`:
+
+- `battery-pack-screw-removal.json`: short happy-path demo with full-battery imaging and automatic unscrewing.
+- `section-rework-layout.json`: layout-specific demo with section imaging, point cloud capture, a specific screw target, and a follow-up image.
+
+To try one in the UI, open **Recipe JSON**, paste the file contents into the import field, and click **Import**.
+
 ## Run locally
 
 Backend API:

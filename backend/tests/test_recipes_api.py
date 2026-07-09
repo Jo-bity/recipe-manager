@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -121,6 +122,18 @@ class RecipesApiTest(unittest.TestCase):
         self.assertEqual(
             response.json()["actions"][0]["id"], "11111111-1111-1111-1111-111111111111"
         )
+
+    def test_sample_recipe_json_files_are_importable(self):
+        sample_dir = Path(__file__).resolve().parents[2] / "sample-data"
+
+        for sample_path in sorted(sample_dir.glob("*.json")):
+            with self.subTest(sample=sample_path.name):
+                document = json.loads(sample_path.read_text(encoding="utf-8"))
+                response = self.client.post("/recipes/import", json=document)
+
+                self.assertEqual(response.status_code, 201)
+                self.assertEqual(response.json()["name"], document["name"])
+                self.assertEqual(len(response.json()["actions"]), len(document["actions"]))
 
     def test_openapi_spec_is_presentable(self):
         schema = self.client.get("/openapi.json").json()
