@@ -2,6 +2,18 @@
 
 API-first MVP for creating technician-safe robot recipes, exporting vendor-neutral Recipe JSON, and previewing vendor-specific command translations.
 
+## Normal user flow
+
+1. Create or select a Recipe from the sidebar.
+2. In **Setup**, give the Recipe a clear operational name. Battery layout and process constraint fields are shown as outlook placeholders for future context.
+3. In **Action List**, add the intended robot procedure as ordered Actions, starting with `Take Image` or `Unscrewing`.
+4. Select an Action and configure it in **Action Configuration** using technician-facing groups:
+   - `Take Image`: choose the capture area and whether depth data should be captured as a point cloud.
+   - `Unscrewing`: choose automatic target detection or a specific screw position.
+5. Use **Validate** before exchange or preview to fail fast on incomplete Recipes.
+6. Use **Recipe JSON** to export/import the vendor-neutral Recipe representation.
+7. Use **Adapter Preview** to inspect how the same Recipe maps to Company A or Company B robot commands without executing robot movement.
+
 ## Run locally
 
 Backend API:
