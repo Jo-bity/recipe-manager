@@ -97,7 +97,7 @@ p {
 
 .stack,
 .field-grid,
-.step-form {
+.action-form {
   display: grid;
   gap: 0.8rem;
 }
@@ -110,7 +110,7 @@ p {
 .workspace-header,
 .actions,
 .preview-actions,
-.step-row,
+.action-row,
 .recipe-row {
   display: flex;
   gap: 0.6rem;
@@ -136,14 +136,14 @@ p {
 }
 
 .list,
-.steps {
+.action-list {
   display: grid;
   gap: 0.6rem;
   margin-top: 1rem;
 }
 
 .recipe-row,
-.step-row {
+.action-row {
   justify-content: space-between;
   border: 1px solid #d8e0e6;
   border-radius: 6px;
@@ -161,15 +161,15 @@ p {
   background: #edf8fa;
 }
 
-.step-main {
+.action-main {
   min-width: 0;
 }
 
-.step-main strong {
+.action-main strong {
   display: block;
 }
 
-.step-main span {
+.action-main span {
   color: #5b6975;
   font-size: 0.88rem;
 }

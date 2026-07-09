@@ -7,28 +7,36 @@ type Coordinate = {
   y: number;
 };
 
-type TakeImageStep = {
-  id: string;
-  type: "take_image";
+type TakeImageParameters = {
   include_pointcloud: boolean;
   image_scope: "full_battery" | "section";
   center?: Coordinate;
 };
 
-type UnscrewingStep = {
-  id: string;
-  type: "unscrewing";
+type UnscrewingParameters = {
   mode: "automatic" | "specific";
   target?: Coordinate;
 };
 
-type RecipeStep = TakeImageStep | UnscrewingStep;
+type TakeImageAction = {
+  id: string;
+  type: "take_image";
+  parameters: TakeImageParameters;
+};
+
+type UnscrewingAction = {
+  id: string;
+  type: "unscrewing";
+  parameters: UnscrewingParameters;
+};
+
+type RecipeAction = TakeImageAction | UnscrewingAction;
 
 type Recipe = {
   id: string;
   schema_version: "1.0";
   name: string;
-  steps: RecipeStep[];
+  actions: RecipeAction[];
   created_at: string;
   updated_at: string;
 };
@@ -36,7 +44,7 @@ type Recipe = {
 type RecipeDocument = {
   schema_version: "1.0";
   name: string;
-  steps: RecipeStep[];
+  actions: RecipeAction[];
 };
 
 const RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -59,11 +67,11 @@ function App() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [activeRecipeId, setActiveRecipeId] = useState<string | null>(null);
   const [recipeName, setRecipeName] = useState("");
-  const [stepType, setStepType] = useState<RecipeStep["type"]>("take_image");
-  const [imageScope, setImageScope] = useState<TakeImageStep["image_scope"]>("full_battery");
+  const [actionType, setActionType] = useState<RecipeAction["type"]>("take_image");
+  const [imageScope, setImageScope] = useState<TakeImageParameters["image_scope"]>("full_battery");
   const [includePointcloud, setIncludePointcloud] = useState(false);
   const [center, setCenter] = useState<Coordinate>({ x: 0, y: 0 });
-  const [unscrewingMode, setUnscrewingMode] = useState<UnscrewingStep["mode"]>("automatic");
+  const [unscrewingMode, setUnscrewingMode] = useState<UnscrewingParameters["mode"]>("automatic");
   const [target, setTarget] = useState<Coordinate>({ x: 0, y: 0 });
   const [importJson, setImportJson] = useState("");
   const [output, setOutput] = useState("{}");
@@ -101,28 +109,32 @@ function App() {
     }
   }
 
-  async function addStep(event: FormEvent) {
+  async function addAction(event: FormEvent) {
     event.preventDefault();
     if (!activeRecipe) return;
 
-    const step =
-      stepType === "take_image"
+    const action =
+      actionType === "take_image"
         ? {
             type: "take_image",
-            include_pointcloud: includePointcloud,
-            image_scope: imageScope,
-            ...(imageScope === "section" ? { center } : {}),
+            parameters: {
+              include_pointcloud: includePointcloud,
+              image_scope: imageScope,
+              ...(imageScope === "section" ? { center } : {}),
+            },
           }
         : {
             type: "unscrewing",
-            mode: unscrewingMode,
-            ...(unscrewingMode === "specific" ? { target } : {}),
+            parameters: {
+              mode: unscrewingMode,
+              ...(unscrewingMode === "specific" ? { target } : {}),
+            },
           };
 
     try {
-      const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/steps`, {
+      const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/actions`, {
         method: "POST",
-        body: JSON.stringify(step),
+        body: JSON.stringify(action),
       });
       await loadRecipes(recipe.id);
     } catch (error) {
@@ -130,10 +142,10 @@ function App() {
     }
   }
 
-  async function moveStep(stepId: string, position: number) {
+  async function moveAction(actionId: string, position: number) {
     if (!activeRecipe) return;
     try {
-      const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/steps/${stepId}/move`, {
+      const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/actions/${actionId}/move`, {
         method: "POST",
         body: JSON.stringify({ position }),
       });
@@ -143,10 +155,10 @@ function App() {
     }
   }
 
-  async function removeStep(stepId: string) {
+  async function removeAction(actionId: string) {
     if (!activeRecipe) return;
     try {
-      const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/steps/${stepId}`, {
+      const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/actions/${actionId}`, {
         method: "DELETE",
       });
       await loadRecipes(recipe.id);
@@ -239,7 +251,7 @@ function App() {
                 onClick={() => setActiveRecipeId(recipe.id)}
               >
                 <span>{recipe.name}</span>
-                <span>{recipe.steps.length} steps</span>
+                <span>{recipe.actions.length} actions</span>
               </button>
             ))}
           </div>
@@ -249,7 +261,11 @@ function App() {
           <div className="workspace-header">
             <div>
               <h2>{activeRecipe?.name ?? "Select a recipe"}</h2>
-              <p>{activeRecipe ? `${activeRecipe.steps.length} ordered steps` : "Add steps, validate, export, or preview vendor commands."}</p>
+              <p>
+                {activeRecipe
+                  ? `${activeRecipe.actions.length} ordered actions`
+                  : "Add actions, validate, export, or preview vendor commands."}
+              </p>
             </div>
             <div className="actions">
               <button disabled={!activeRecipe} onClick={validateRecipe}>
@@ -261,20 +277,20 @@ function App() {
             </div>
           </div>
 
-          <form className="step-form" onSubmit={addStep}>
+          <form className="action-form" onSubmit={addAction}>
             <label>
-              Step type
-              <select value={stepType} onChange={(event) => setStepType(event.target.value as RecipeStep["type"])}>
+              Action type
+              <select value={actionType} onChange={(event) => setActionType(event.target.value as RecipeAction["type"])}>
                 <option value="take_image">Take image</option>
                 <option value="unscrewing">Unscrewing</option>
               </select>
             </label>
 
-            {stepType === "take_image" ? (
+            {actionType === "take_image" ? (
               <div className="field-grid">
                 <label>
                   Image scope
-                  <select value={imageScope} onChange={(event) => setImageScope(event.target.value as TakeImageStep["image_scope"])}>
+                  <select value={imageScope} onChange={(event) => setImageScope(event.target.value as TakeImageParameters["image_scope"])}>
                     <option value="full_battery">Full battery</option>
                     <option value="section">Section</option>
                   </select>
@@ -298,7 +314,7 @@ function App() {
               <div className="field-grid">
                 <label>
                   Unscrewing mode
-                  <select value={unscrewingMode} onChange={(event) => setUnscrewingMode(event.target.value as UnscrewingStep["mode"])}>
+                  <select value={unscrewingMode} onChange={(event) => setUnscrewingMode(event.target.value as UnscrewingParameters["mode"])}>
                     <option value="automatic">Automatic</option>
                     <option value="specific">Specific</option>
                   </select>
@@ -313,27 +329,30 @@ function App() {
             )}
 
             <button disabled={!activeRecipe} type="submit">
-              Add step
+              Add action
             </button>
           </form>
 
-          <div className="steps">
-            {activeRecipe ? (
-              activeRecipe.steps.map((step, index) => (
-                <StepRow
-                  key={step.id}
-                  index={index}
-                  step={step}
-                  isFirst={index === 0}
-                  isLast={index === activeRecipe.steps.length - 1}
-                  onMove={moveStep}
-                  onRemove={removeStep}
-                />
-              ))
-            ) : (
-              <p>No recipe selected.</p>
-            )}
-          </div>
+          <section>
+            <h3>Action List</h3>
+            <div className="action-list">
+              {activeRecipe ? (
+                activeRecipe.actions.map((action, index) => (
+                  <ActionRow
+                    key={action.id}
+                    index={index}
+                    action={action}
+                    isFirst={index === 0}
+                    isLast={index === activeRecipe.actions.length - 1}
+                    onMove={moveAction}
+                    onRemove={removeAction}
+                  />
+                ))
+              ) : (
+                <p>No recipe selected.</p>
+              )}
+            </div>
+          </section>
 
           <div className="split">
             <section>
@@ -347,7 +366,7 @@ function App() {
               <button onClick={importRecipe}>Import</button>
             </section>
             <section>
-              <h3>Robot command preview</h3>
+              <h3>Adapter Preview</h3>
               <div className="preview-actions">
                 <button disabled={!activeRecipe} onClick={() => previewCommands("company_a")}>
                   Company A
@@ -382,42 +401,42 @@ function CoordinateInput({
   );
 }
 
-function StepRow({
+function ActionRow({
   index,
-  step,
+  action,
   isFirst,
   isLast,
   onMove,
   onRemove,
 }: {
   index: number;
-  step: RecipeStep;
+  action: RecipeAction;
   isFirst: boolean;
   isLast: boolean;
-  onMove: (stepId: string, position: number) => void;
-  onRemove: (stepId: string) => void;
+  onMove: (actionId: string, position: number) => void;
+  onRemove: (actionId: string) => void;
 }) {
   const detail =
-    step.type === "take_image"
-      ? `${step.image_scope.replace("_", " ")}${step.include_pointcloud ? ", pointcloud" : ""}`
-      : `${step.mode} unscrewing`;
+    action.type === "take_image"
+      ? `${action.parameters.image_scope.replace("_", " ")}${action.parameters.include_pointcloud ? ", pointcloud" : ""}`
+      : `${action.parameters.mode} unscrewing`;
 
   return (
-    <div className="step-row">
-      <div className="step-main">
+    <div className="action-row">
+      <div className="action-main">
         <strong>
-          {index + 1}. {step.type.replace("_", " ")}
+          {index + 1}. {action.type.replace("_", " ")}
         </strong>
         <span>{detail}</span>
       </div>
       <div className="icon-actions">
-        <button disabled={isFirst} onClick={() => onMove(step.id, index - 1)}>
+        <button disabled={isFirst} onClick={() => onMove(action.id, index - 1)}>
           Up
         </button>
-        <button disabled={isLast} onClick={() => onMove(step.id, index + 1)}>
+        <button disabled={isLast} onClick={() => onMove(action.id, index + 1)}>
           Down
         </button>
-        <button onClick={() => onRemove(step.id)}>Remove</button>
+        <button onClick={() => onRemove(action.id)}>Remove</button>
       </div>
     </div>
   );
