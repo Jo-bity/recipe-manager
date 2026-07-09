@@ -52,6 +52,19 @@ label {
   font-size: 0.9rem;
 }
 
+fieldset {
+  border: 1px solid #d8e0e6;
+  border-radius: 8px;
+  margin: 0;
+  padding: 0.9rem;
+}
+
+legend {
+  color: #18212b;
+  font-weight: 700;
+  padding: 0 0.3rem;
+}
+
 h1,
 h2,
 h3,
@@ -60,7 +73,7 @@ p {
 }
 
 .shell {
-  max-width: 1240px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 1.5rem;
 }
@@ -84,7 +97,7 @@ p {
 
 .layout {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: 300px minmax(0, 1fr);
   gap: 1rem;
 }
 
@@ -95,9 +108,14 @@ p {
   padding: 1rem;
 }
 
+.sidebar {
+  align-self: start;
+}
+
 .stack,
-.field-grid,
-.action-form {
+.setup-form,
+.configuration-form,
+.workspace-page {
   display: grid;
   gap: 0.8rem;
 }
@@ -111,28 +129,77 @@ p {
 .actions,
 .preview-actions,
 .action-row,
-.recipe-row {
+.recipe-row,
+.add-actions {
   display: flex;
   gap: 0.6rem;
   align-items: center;
 }
 
-.workspace-header {
+.workspace-header,
+.action-row,
+.recipe-row {
   justify-content: space-between;
 }
 
-.field-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.checkbox {
+.tabs {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  border-bottom: 1px solid #d8e0e6;
+  padding-bottom: 0.65rem;
 }
 
-.checkbox input {
-  width: auto;
+.tabs button,
+.segmented-control button {
+  background: white;
+  color: #1f4f5f;
+}
+
+.tabs button.active,
+.segmented-control button.active {
+  background: #1f4f5f;
+  color: white;
+}
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(280px, 1fr) minmax(320px, 1.25fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.setup-section,
+.action-list-section,
+.configuration-section,
+.json-grid section,
+.workspace-page {
+  border: 1px solid #d8e0e6;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.section-heading {
+  margin-bottom: 0.9rem;
+}
+
+.section-heading span {
+  color: #697783;
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.section-heading h3 {
+  margin-bottom: 0;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.8rem;
 }
 
 .list,
@@ -144,7 +211,6 @@ p {
 
 .recipe-row,
 .action-row {
-  justify-content: space-between;
   border: 1px solid #d8e0e6;
   border-radius: 6px;
   padding: 0.7rem;
@@ -156,27 +222,36 @@ p {
   color: #18212b;
 }
 
-.recipe-row.active {
+.recipe-row.active,
+.action-row.selected {
   border-color: #1f4f5f;
   background: #edf8fa;
 }
 
-.action-main {
+.action-select {
   min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #18212b;
+  text-align: left;
 }
 
-.action-main strong {
+.action-select strong,
+.action-select span {
   display: block;
 }
 
-.action-main span {
+.action-select span {
   color: #5b6975;
   font-size: 0.88rem;
 }
 
 .icon-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
+  justify-content: flex-end;
 }
 
 .icon-actions button {
@@ -184,14 +259,36 @@ p {
   padding: 0.45rem;
 }
 
-.split {
+.add-actions {
+  flex-wrap: wrap;
+}
+
+.segmented-control {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.field-note,
+.empty-state {
+  color: #5b6975;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+.json-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
 }
 
+.json-grid section {
+  display: grid;
+  gap: 0.8rem;
+}
+
 pre {
-  min-height: 12rem;
+  min-height: 18rem;
   overflow: auto;
   background: #101820;
   color: #eef7fb;
@@ -199,9 +296,15 @@ pre {
   padding: 1rem;
 }
 
+@media (max-width: 1020px) {
+  .editor-grid,
+  .json-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 860px) {
   .layout,
-  .split,
   .field-grid {
     grid-template-columns: 1fr;
   }
@@ -210,5 +313,11 @@ pre {
   .topbar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .tabs,
+  .actions,
+  .preview-actions {
+    flex-wrap: wrap;
   }
 }
