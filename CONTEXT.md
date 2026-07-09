@@ -64,6 +64,14 @@ _Avoid_: Polish, completeness, production-ready
 The technician-facing view for adapting Recipe intent: naming Recipes, editing ordered Actions, validating structure, and importing or exporting Recipe JSON.
 _Avoid_: Admin UI, robot debugger, execution console
 
+**Setup**:
+The Recipe Editor area for defining the Recipe's operational purpose before editing Actions, such as the Recipe name and the Battery Layout or Process Constraint it addresses.
+_Avoid_: Metadata form, project settings, robot setup
+
+**Action Configuration**:
+The Recipe Editor area for explaining and editing the parameters of the currently selected Action in technician language.
+_Avoid_: Raw JSON editor, inline add form, robot command form
+
 **Adapter Preview**:
 The engineering-facing review view for inspecting how vendor-neutral Recipe JSON maps to vendor-specific command plans without executing robot movements.
 _Avoid_: Execution page, technician editor, robot control panel
