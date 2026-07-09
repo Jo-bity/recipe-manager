@@ -48,11 +48,11 @@ PYTHONPATH=backend/src python -m unittest discover -s backend/tests -v
 Core:
 
 - Recipe CRUD
-- Step add/update/delete/reorder
-- Strict validation for `take_image` and `unscrewing` steps
+- Action add/update/delete/reorder
+- Strict validation for `take_image` and `unscrewing` Action parameters
 - Canonical Recipe JSON import/export
 - Vendor command preview for Company A and Company B
-- Small technician-facing UI
+- Small technician-facing React UI
 
 Outlook:
 
