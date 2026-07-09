@@ -39,7 +39,9 @@ type RecipeDocument = {
   steps: RecipeStep[];
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const API_BASE_URL = RAW_API_BASE_URL.replace(/\/$/, "");
+const API_DOCS_URL = `${API_BASE_URL || "http://localhost:8000"}/docs`;
 
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -208,7 +210,7 @@ function App() {
           <h1>r3-recipe-manager</h1>
           <p>Create technician-safe robot recipes and export vendor-neutral Recipe JSON.</p>
         </div>
-        <a href="/docs" target="_blank" rel="noreferrer">
+        <a href={API_DOCS_URL} target="_blank" rel="noreferrer">
           API docs
         </a>
       </section>
