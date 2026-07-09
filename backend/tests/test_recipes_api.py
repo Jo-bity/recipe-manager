@@ -113,6 +113,32 @@ class RecipesApiTest(unittest.TestCase):
             response.json()["steps"][0]["id"], "11111111-1111-1111-1111-111111111111"
         )
 
+    def test_openapi_spec_is_presentable(self):
+        schema = self.client.get("/openapi.json").json()
+
+        self.assertEqual(schema["info"]["title"], "r3-recipe-manager API")
+        self.assertIn("API-first recipe manager", schema["info"]["summary"])
+
+        paths = schema["paths"]
+        self.assertEqual(paths["/recipes"]["get"]["operationId"], "listRecipes")
+        self.assertEqual(paths["/recipes"]["post"]["summary"], "Create Recipe")
+        self.assertEqual(
+            paths["/recipes/{recipe_id}/robot-commands/preview"]["post"]["tags"],
+            ["robot adapters"],
+        )
+        self.assertIn(
+            "vendor-specific command plan",
+            paths["/recipes/{recipe_id}/robot-commands/preview"]["post"]["description"],
+        )
+        self.assertIn(
+            "Recipe JSON",
+            paths["/recipes/{recipe_id}/export"]["get"]["summary"],
+        )
+        self.assertEqual(
+            schema["components"]["schemas"]["RecipeDocument"]["properties"]["schema_version"]["description"],
+            "Recipe JSON schema version. Used to evolve the portable format safely.",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
