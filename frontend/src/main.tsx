@@ -292,9 +292,12 @@ function App() {
       <div className="container-fluid p-4">
         <div className="row g-4">
           <aside className="col-12 col-xl-3">
-            <div className="card shadow-sm">
+            <div className={`card shadow-sm state-card ${activeRecipe ? "" : "state-card-current"}`}>
               <div className="card-header bg-white">
-                <h2 className="h5 mb-0">Recipes</h2>
+                <div className="d-flex align-items-center justify-content-between gap-2">
+                  <h2 className="h5 mb-0">Recipes</h2>
+                  {!activeRecipe ? <span className="badge text-bg-primary">Start here</span> : null}
+                </div>
               </div>
               <div className="card-body">
                 <form className="vstack gap-2" onSubmit={createRecipe}>
@@ -436,8 +439,8 @@ function EditorView({
 
       <div className="row g-4 align-items-start">
         <section className="col-12 col-xxl-4">
-          <div className="card h-100 border-primary-subtle">
-            <SectionHeading number="1" title="Setup" badge="Recipe purpose" />
+          <div className={`card h-100 border-primary-subtle state-card ${activeRecipe ? "state-card-current" : "state-card-disabled"}`}>
+            <SectionHeading number="1" title="Setup" badge={activeRecipe ? "Editable" : "Select recipe"} />
             <div className="card-body">
               <form className="vstack gap-3" onSubmit={onRenameRecipe}>
                 <div>
@@ -454,16 +457,22 @@ function EditorView({
                     onChange={(event) => onSetupNameChange(event.target.value)}
                   />
                 </div>
-                <div>
-                  <label className="form-label" htmlFor="battery-layout">
-                    Battery layout
-                  </label>
+                <div className="unavailable-control rounded border p-2">
+                  <div className="d-flex align-items-center justify-content-between gap-2 mb-1">
+                    <label className="form-label mb-0" htmlFor="battery-layout">
+                      Battery layout
+                    </label>
+                    <span className="badge text-bg-secondary">Outlook</span>
+                  </div>
                   <input id="battery-layout" className="form-control" disabled placeholder="Pack variant or layout reference" />
                 </div>
-                <div>
-                  <label className="form-label" htmlFor="process-constraint">
-                    Process constraint
-                  </label>
+                <div className="unavailable-control rounded border p-2">
+                  <div className="d-flex align-items-center justify-content-between gap-2 mb-1">
+                    <label className="form-label mb-0" htmlFor="process-constraint">
+                      Process constraint
+                    </label>
+                    <span className="badge text-bg-secondary">Outlook</span>
+                  </div>
                   <input id="process-constraint" className="form-control" disabled placeholder="Station, tool, or customer constraint" />
                 </div>
                 <button className="btn btn-primary" disabled={!activeRecipe} type="submit">
@@ -475,8 +484,8 @@ function EditorView({
         </section>
 
         <section className="col-12 col-xxl-4">
-          <div className="card h-100 border-primary-subtle">
-            <SectionHeading number="2" title="Action List" badge="Robot procedure" />
+          <div className={`card h-100 border-primary-subtle state-card ${activeRecipe ? "state-card-current" : "state-card-disabled"}`}>
+            <SectionHeading number="2" title="Action List" badge={activeRecipe ? "Add or reorder" : "Select recipe"} />
             <div className="card-body">
               <div className="btn-group w-100 mb-3" role="group" aria-label="Add action">
                 <button className="btn btn-outline-primary" disabled={!activeRecipe} onClick={() => onAddAction("take_image")}>
@@ -514,7 +523,7 @@ function EditorView({
         </section>
 
         <section className="col-12 col-xxl-4">
-          <div className="card h-100 border-primary-subtle">
+          <div className={`card h-100 border-primary-subtle state-card ${selectedAction ? "state-card-current" : "state-card-disabled"}`}>
             <SectionHeading number="3" title="Action Configuration" badge={selectedAction ? actionLabel(selectedAction) : "Select action"} />
             <div className="card-body">
               {selectedAction ? <ActionConfiguration action={selectedAction} onUpdate={onUpdateAction} /> : <EmptyState label="Add or select an action to configure it." />}
@@ -527,10 +536,11 @@ function EditorView({
 }
 
 function WorkflowGuide({ activeRecipe, selectedAction }: { activeRecipe: Recipe | null; selectedAction: RecipeAction | null }) {
+  const currentLabel = !activeRecipe ? "Setup" : activeRecipe.actions.length === 0 ? "Actions" : selectedAction ? "Configure" : "Actions";
   const items = [
-    { label: "Setup", done: Boolean(activeRecipe?.name) },
-    { label: "Actions", done: Boolean(activeRecipe && activeRecipe.actions.length > 0) },
-    { label: "Configure", done: Boolean(selectedAction) },
+    { label: "Setup", done: Boolean(activeRecipe?.name), current: currentLabel === "Setup" },
+    { label: "Actions", done: Boolean(activeRecipe && activeRecipe.actions.length > 0), current: currentLabel === "Actions" },
+    { label: "Configure", done: Boolean(selectedAction), current: currentLabel === "Configure" },
   ];
 
   return (
@@ -539,7 +549,7 @@ function WorkflowGuide({ activeRecipe, selectedAction }: { activeRecipe: Recipe 
         <div className="row g-2">
           {items.map((item, index) => (
             <div className="col-12 col-md-4" key={item.label}>
-              <div className={`workflow-step ${item.done ? "complete" : ""}`}>
+              <div className={`workflow-step ${item.done ? "complete" : ""} ${item.current ? "current" : ""}`}>
                 <span className="badge rounded-pill text-bg-primary">{index + 1}</span>
                 <span className="fw-semibold">{item.label}</span>
               </div>
@@ -561,8 +571,8 @@ function PreviewView({
   onPreviewCommands: (vendor: "company_a" | "company_b") => void;
 }) {
   return (
-    <div className="card border-primary-subtle">
-      <SectionHeading number="4" title="Adapter Preview" badge="Command plan" />
+    <div className={`card border-primary-subtle state-card ${activeRecipe ? "state-card-current" : "state-card-disabled"}`}>
+      <SectionHeading number="4" title="Adapter Preview" badge={activeRecipe ? "Command plan" : "Select recipe"} />
       <div className="card-body">
         <div className="btn-group mb-3" role="group" aria-label="Vendor preview">
           <button className="btn btn-outline-primary" disabled={!activeRecipe} onClick={() => onPreviewCommands("company_a")}>

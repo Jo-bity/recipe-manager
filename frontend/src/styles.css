@@ -20,6 +20,43 @@ body {
   overflow: auto;
 }
 
+.state-card {
+  transition: border-color 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+}
+
+.state-card-current {
+  border-color: rgba(13, 110, 253, 0.55) !important;
+  box-shadow: 0 0 0 0.18rem rgba(13, 110, 253, 0.12), 0 0.35rem 1rem rgba(13, 110, 253, 0.08);
+}
+
+.state-card-disabled {
+  background: #f1f3f5;
+  border-color: #d6d8db !important;
+  opacity: 0.78;
+}
+
+.state-card-disabled .card-header,
+.state-card-disabled .card-body {
+  background: transparent;
+}
+
+.unavailable-control {
+  background: #f1f3f5;
+  color: #6c757d;
+}
+
+.unavailable-control .form-control:disabled {
+  background: #e9ecef;
+  border-color: #ced4da;
+  color: #6c757d;
+  opacity: 1;
+}
+
+button:disabled,
+.btn:disabled {
+  filter: grayscale(0.35);
+}
+
 .workflow-guide .workflow-step {
   align-items: center;
   background: rgba(255, 255, 255, 0.72);
@@ -33,7 +70,13 @@ body {
 
 .workflow-guide .workflow-step.complete {
   background: white;
-  border-color: rgba(13, 110, 253, 0.36);
+  border-color: rgba(25, 135, 84, 0.35);
+}
+
+.workflow-guide .workflow-step.current {
+  background: white;
+  border-color: rgba(13, 110, 253, 0.55);
+  box-shadow: 0 0 0 0.16rem rgba(13, 110, 253, 0.12);
 }
 
 .action-list .list-group-item {
