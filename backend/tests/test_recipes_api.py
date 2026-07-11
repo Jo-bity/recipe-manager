@@ -103,6 +103,23 @@ class RecipesApiTest(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["detail"]["code"], "invalid_request")
+        self.assertEqual(response.json()["detail"]["message"], "Request validation failed.")
+        self.assertEqual(
+            response.json()["detail"]["errors"][0]["path"],
+            "actions[0].unscrewing.parameters.target.x",
+        )
+        self.assertIn("greater than or equal to 0", response.json()["detail"]["errors"][0]["message"])
+
+    def test_step_payload_errors_are_meaningful(self):
+        recipe_id = self.client.post("/recipes", json={"name": "Missing actions"}).json()["id"]
+
+        response = self.client.post(f"/recipes/{recipe_id}/steps", json={"actions": []})
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["detail"]["code"], "invalid_request")
+        self.assertEqual(response.json()["detail"]["errors"][0]["path"], "actions")
+        self.assertIn("at least 1 item", response.json()["detail"]["errors"][0]["message"])
 
     def test_empty_recipe_cannot_be_exported(self):
         recipe_id = self.client.post("/recipes", json={"name": "Empty recipe"}).json()["id"]

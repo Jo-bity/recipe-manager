@@ -1,5 +1,9 @@
+from typing import Any
+
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.bc_recipes.api.recipes_rest_api import router as recipes_router
 
@@ -47,5 +51,40 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": {
+                "code": "invalid_request",
+                "message": "Request validation failed.",
+                "errors": [_validation_error_detail(error) for error in exc.errors()],
+            }
+        },
+    )
+
+
+def _validation_error_detail(error: dict[str, Any]) -> dict[str, str]:
+    return {
+        "path": _validation_path(error.get("loc", ())),
+        "message": str(error.get("msg", "Invalid value.")),
+    }
+
+
+def _validation_path(location: tuple[Any, ...]) -> str:
+    parts = [part for part in location if part != "body"]
+    path = ""
+    for part in parts:
+        if isinstance(part, int):
+            path = f"{path}[{part}]"
+            continue
+        if path:
+            path += "."
+        path += str(part)
+    return path or "request"
+
 
 app.include_router(recipes_router)
