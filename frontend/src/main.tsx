@@ -127,12 +127,12 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-function defaultAction(type: RecipeAction["type"]): RecipeActionInput {
+function defaultAction(type: RecipeAction["type"], includePointcloud = false): RecipeActionInput {
   if (type === "take_image") {
     return {
       type: "take_image",
       parameters: {
-        include_pointcloud: false,
+        include_pointcloud: includePointcloud,
         image_scope: "full_battery",
       },
     };
@@ -145,8 +145,8 @@ function defaultAction(type: RecipeAction["type"]): RecipeActionInput {
   };
 }
 
-function defaultStep(type: RecipeAction["type"]): RecipeStepInput {
-  return { type, actions: [defaultAction(type)] };
+function defaultStep(type: RecipeAction["type"], includePointcloud = false): RecipeStepInput {
+  return { type, actions: [defaultAction(type, includePointcloud)] };
 }
 
 function recipeFileName(recipeName: string) {
@@ -313,12 +313,12 @@ function App() {
     }
   }
 
-  async function addStep(type: RecipeAction["type"]) {
+  async function addStep(type: RecipeAction["type"], includePointcloud = false) {
     if (!activeRecipe) return;
     try {
       const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/steps`, {
         method: "POST",
-        body: JSON.stringify(defaultStep(type)),
+        body: JSON.stringify(defaultStep(type, includePointcloud)),
       });
       const addedStep = recipe.steps[recipe.steps.length - 1];
       applyRecipe(recipe);
@@ -560,7 +560,7 @@ function EditorView({
   onCreateRecipe: (event: FormEvent) => void;
   onSetupNameChange: (name: string) => void;
   onRenameRecipe: (event: FormEvent) => void;
-  onAddStep: (type: RecipeAction["type"]) => void;
+  onAddStep: (type: RecipeAction["type"], includePointcloud?: boolean) => void;
   onSelectStep: (stepId: string) => void;
   onMoveStep: (stepId: string, position: number) => void;
   onRemoveStep: (stepId: string) => void;
@@ -648,8 +648,17 @@ function EditorView({
         </section>
 
         <section className="col-12 col-xl-6 col-xxl-3">
+          <div className={`card h-100 border-primary-subtle state-card ${selectedStep ? "state-card-current" : "state-card-disabled"}`}>
+            <SectionHeading number="3" title="Step Configuration" badge={selectedAction ? actionLabel(selectedAction) : "Select step"} />
+            <div className="card-body">
+              {selectedAction ? <ActionConfiguration action={selectedAction} onUpdate={onUpdateAction} /> : <EmptyState label="Add or select a step to configure it." />}
+            </div>
+          </div>
+        </section>
+
+        <section className="col-12 col-xl-6 col-xxl-3">
           <div className={`card h-100 border-primary-subtle state-card ${activeRecipe ? "state-card-current" : "state-card-disabled"}`}>
-            <SectionHeading number="3" title="Step List" badge={activeRecipe ? "Order" : "Create recipe"} />
+            <SectionHeading number="4" title="Step List" badge={activeRecipe ? "Recipe order" : "Create recipe"} />
             <div className="card-body">
               <div className="list-group action-list">
                 {activeRecipe ? (
@@ -677,27 +686,18 @@ function EditorView({
             </div>
           </div>
         </section>
-
-        <section className="col-12 col-xl-6 col-xxl-3">
-          <div className={`card h-100 border-primary-subtle state-card ${selectedStep ? "state-card-current" : "state-card-disabled"}`}>
-            <SectionHeading number="4" title="Step Configuration" badge={selectedAction ? actionLabel(selectedAction) : "Select step"} />
-            <div className="card-body">
-              {selectedAction ? <ActionConfiguration action={selectedAction} onUpdate={onUpdateAction} /> : <EmptyState label="Add or select a step to configure it." />}
-            </div>
-          </div>
-        </section>
       </div>
     </div>
   );
 }
 
 function WorkflowGuide({ activeRecipe, selectedStep }: { activeRecipe: Recipe | null; selectedStep: RecipeStep | null }) {
-  const currentLabel = !activeRecipe ? "Setup" : activeRecipe.steps.length === 0 ? "Add" : selectedStep ? "Configure" : "Order";
+  const currentLabel = !activeRecipe ? "Setup" : activeRecipe.steps.length === 0 ? "Add" : selectedStep ? "Configure" : "List";
   const items = [
     { label: "Setup", done: Boolean(activeRecipe?.name), current: currentLabel === "Setup" },
     { label: "Add", done: Boolean(activeRecipe && activeRecipe.steps.length > 0), current: currentLabel === "Add" },
-    { label: "Order", done: Boolean(activeRecipe && activeRecipe.steps.length > 0), current: currentLabel === "Order" },
     { label: "Configure", done: Boolean(selectedStep), current: currentLabel === "Configure" },
+    { label: "List", done: Boolean(activeRecipe && activeRecipe.steps.length > 0), current: currentLabel === "List" },
   ];
 
   return (
@@ -815,9 +815,10 @@ function StepCatalog({
   onAddStep,
 }: {
   activeRecipe: Recipe | null;
-  onAddStep: (type: RecipeAction["type"]) => void;
+  onAddStep: (type: RecipeAction["type"], includePointcloud?: boolean) => void;
 }) {
   const [selectedType, setSelectedType] = useState<RecipeAction["type"]>("take_image");
+  const [includePointcloud, setIncludePointcloud] = useState(false);
   const selectedItem = STEP_CATALOG.find((item) => item.type === selectedType && item.status === "available");
   const canAddSelectedStep = Boolean(activeRecipe && selectedItem?.type);
 
@@ -855,10 +856,26 @@ function StepCatalog({
           );
         })}
       </div>
+      {selectedType === "take_image" ? (
+        <fieldset className="border rounded p-3">
+          <legend className="configuration-legend float-none w-auto px-2 fs-6 fw-semibold">
+            <Icon name="layers" />
+            Image output
+          </legend>
+          <SegmentedControl
+            value={includePointcloud ? "pointcloud" : "image_only"}
+            options={[
+              { value: "image_only", label: "2D image only" },
+              { value: "pointcloud", label: "Image + point cloud" },
+            ]}
+            onChange={(mode) => setIncludePointcloud(mode === "pointcloud")}
+          />
+        </fieldset>
+      ) : null}
       <button
         className="btn btn-primary w-100"
         disabled={!canAddSelectedStep}
-        onClick={() => selectedItem?.type && onAddStep(selectedItem.type)}
+        onClick={() => selectedItem?.type && onAddStep(selectedItem.type, includePointcloud)}
         type="button"
       >
         Add Step
@@ -872,7 +889,14 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
     const parameters = action.parameters;
     return (
       <div className="vstack gap-3">
-        <ImageCapturePreview parameters={parameters} />
+        <ImageCapturePreview
+          parameters={parameters}
+          onSelectCenter={
+            parameters.image_scope === "section"
+              ? (center) => onUpdate({ ...action, parameters: { ...parameters, center } })
+              : undefined
+          }
+        />
         <fieldset className="border rounded p-3">
           <legend className="configuration-legend float-none w-auto px-2 fs-6 fw-semibold">
             <Icon name="crop" />
@@ -914,21 +938,7 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
             </div>
           ) : null}
         </fieldset>
-
-        <fieldset className="border rounded p-3">
-          <legend className="configuration-legend float-none w-auto px-2 fs-6 fw-semibold">
-            <Icon name="layers" />
-            Depth data
-          </legend>
-          <SegmentedControl
-            value={parameters.include_pointcloud ? "pointcloud" : "image_only"}
-            options={[
-              { value: "image_only", label: "2D image only" },
-              { value: "pointcloud", label: "Image + point cloud" },
-            ]}
-            onChange={(mode) => onUpdate({ ...action, parameters: { ...parameters, include_pointcloud: mode === "pointcloud" } })}
-          />
-        </fieldset>
+        <StepConfigurationOutlook type={action.type} />
       </div>
     );
   }
@@ -936,7 +946,14 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
   const parameters = action.parameters;
   return (
     <div className="vstack gap-3">
-      <UnscrewingPreview parameters={parameters} />
+      <UnscrewingPreview
+        parameters={parameters}
+        onSelectTarget={
+          parameters.mode === "specific"
+            ? (target) => onUpdate({ ...action, parameters: { ...parameters, target } })
+            : undefined
+        }
+      />
       <fieldset className="border rounded p-3">
         <legend className="configuration-legend float-none w-auto px-2 fs-6 fw-semibold">
           <Icon name="target" />
@@ -978,11 +995,38 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
           </div>
         ) : null}
       </fieldset>
+      <StepConfigurationOutlook type={action.type} />
     </div>
   );
 }
 
-function ImageCapturePreview({ parameters }: { parameters: TakeImageParameters }) {
+function StepConfigurationOutlook({ type }: { type: RecipeAction["type"] }) {
+  const isImageStep = type === "take_image";
+  return (
+    <div className="unavailable-control rounded border p-2">
+      <div className="d-flex align-items-center justify-content-between gap-2 mb-1">
+        <label className="form-label mb-0" htmlFor={`step-outlook-${type}`}>
+          {isImageStep ? "Image source" : "Tool profile"}
+        </label>
+        <span className="badge text-bg-secondary">Outlook</span>
+      </div>
+      <input
+        id={`step-outlook-${type}`}
+        className="form-control"
+        disabled
+        placeholder={isImageStep ? "Camera feed, exposure, annotation preset" : "Torque limit, bit type, force profile"}
+      />
+    </div>
+  );
+}
+
+function ImageCapturePreview({
+  parameters,
+  onSelectCenter,
+}: {
+  parameters: TakeImageParameters;
+  onSelectCenter?: (coordinate: Coordinate) => void;
+}) {
   const center = parameters.center ?? { x: 50, y: 50 };
   const x = clampPercent(center.x);
   const y = clampPercent(center.y);
@@ -990,10 +1034,16 @@ function ImageCapturePreview({ parameters }: { parameters: TakeImageParameters }
     left: `${x}%`,
     top: `${y}%`,
   };
+  const isSelectable = Boolean(onSelectCenter);
 
   return (
     <div className="configuration-preview">
-      <div className={`battery-preview ${parameters.include_pointcloud ? "battery-preview-depth" : ""}`}>
+      <div
+        className={`battery-preview ${parameters.include_pointcloud ? "battery-preview-depth" : ""} ${isSelectable ? "battery-preview-selectable" : ""}`}
+        onClick={(event) => onSelectCenter?.(coordinateFromPreview(event))}
+        role={isSelectable ? "button" : undefined}
+        tabIndex={isSelectable ? 0 : undefined}
+      >
         <div className="battery-terminal battery-terminal-positive" />
         <div className="battery-terminal battery-terminal-negative" />
         <div className="battery-grid">
@@ -1021,16 +1071,28 @@ function ImageCapturePreview({ parameters }: { parameters: TakeImageParameters }
   );
 }
 
-function UnscrewingPreview({ parameters }: { parameters: UnscrewingParameters }) {
+function UnscrewingPreview({
+  parameters,
+  onSelectTarget,
+}: {
+  parameters: UnscrewingParameters;
+  onSelectTarget?: (coordinate: Coordinate) => void;
+}) {
   const target = parameters.target ?? { x: 50, y: 50 };
   const targetStyle = {
     left: `${clampPercent(target.x)}%`,
     top: `${clampPercent(target.y)}%`,
   };
+  const isSelectable = Boolean(onSelectTarget);
 
   return (
     <div className="configuration-preview">
-      <div className="battery-preview">
+      <div
+        className={`battery-preview ${isSelectable ? "battery-preview-selectable" : ""}`}
+        onClick={(event) => onSelectTarget?.(coordinateFromPreview(event))}
+        role={isSelectable ? "button" : undefined}
+        tabIndex={isSelectable ? 0 : undefined}
+      >
         <div className="battery-grid">
           {Array.from({ length: 18 }).map((_, index) => (
             <span className="battery-cell screw-cell" key={index} />
@@ -1157,6 +1219,18 @@ function actionSummary(action: RecipeAction): string {
 function formatCoordinate(coordinate?: Coordinate): string {
   if (!coordinate) return "x=0, y=0";
   return `x=${coordinate.x}, y=${coordinate.y}`;
+}
+
+function coordinateFromPreview(event: React.MouseEvent<HTMLDivElement>): Coordinate {
+  const rect = event.currentTarget.getBoundingClientRect();
+  return {
+    x: clampCoordinatePercent(Math.round(((event.clientX - rect.left) / rect.width) * 100)),
+    y: clampCoordinatePercent(Math.round(((event.clientY - rect.top) / rect.height) * 100)),
+  };
+}
+
+function clampCoordinatePercent(value: number): number {
+  return Math.max(0, Math.min(100, value));
 }
 
 function clampPercent(value: number): number {

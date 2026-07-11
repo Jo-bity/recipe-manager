@@ -243,6 +243,17 @@ button:disabled,
     #f8fafc;
 }
 
+.battery-preview-selectable {
+  cursor: crosshair;
+}
+
+.battery-preview-selectable:hover,
+.battery-preview-selectable:focus {
+  border-color: rgba(13, 110, 253, 0.72);
+  box-shadow: 0 0 0 0.16rem rgba(13, 110, 253, 0.12);
+  outline: none;
+}
+
 .battery-grid {
   display: grid;
   gap: 0.45rem;
