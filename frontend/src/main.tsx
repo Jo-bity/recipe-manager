@@ -817,36 +817,52 @@ function StepCatalog({
   activeRecipe: Recipe | null;
   onAddStep: (type: RecipeAction["type"]) => void;
 }) {
+  const [selectedType, setSelectedType] = useState<RecipeAction["type"]>("take_image");
+  const selectedItem = STEP_CATALOG.find((item) => item.type === selectedType && item.status === "available");
+  const canAddSelectedStep = Boolean(activeRecipe && selectedItem?.type);
+
   return (
-    <div className="step-catalog mb-3">
-      {STEP_CATALOG.map((item) => {
-        const available = Boolean(activeRecipe && item.status === "available" && item.type);
-        return (
-          <button
-            className={`step-type-card ${item.status === "planned" ? "step-type-card-planned" : ""}`}
-            disabled={!available}
-            key={item.label}
-            onClick={() => item.type && onAddStep(item.type)}
-            type="button"
-          >
-            <span className="step-type-card-header">
-              <span className="step-type-title">
-                <span className="icon-shell">
-                  <Icon name={item.icon} />
+    <div className="vstack gap-3">
+      <div className="step-catalog">
+        {STEP_CATALOG.map((item) => {
+          const selectable = Boolean(activeRecipe && item.status === "available" && item.type);
+          const selected = item.type === selectedType && item.status === "available";
+          return (
+            <button
+              aria-pressed={selected}
+              className={`step-type-card ${selected ? "step-type-card-selected" : ""} ${item.status === "planned" ? "step-type-card-planned" : ""}`}
+              disabled={!selectable}
+              key={item.label}
+              onClick={() => item.type && setSelectedType(item.type)}
+              type="button"
+            >
+              <span className="step-type-card-header">
+                <span className="step-type-title">
+                  <span className="icon-shell">
+                    <Icon name={item.icon} />
+                  </span>
+                  <span className="fw-semibold">{item.label}</span>
                 </span>
-                <span className="fw-semibold">{item.label}</span>
+                <span className={`badge ${item.status === "available" ? "text-bg-primary" : "text-bg-secondary"}`}>
+                  {item.status === "available" ? item.group : "Outlook"}
+                </span>
               </span>
-              <span className={`badge ${item.status === "available" ? "text-bg-primary" : "text-bg-secondary"}`}>
-                {item.status === "available" ? item.group : "Outlook"}
+              <span className="step-type-description">{item.description}</span>
+              <span className="step-type-action">
+                {item.status === "available" ? (selected ? "Selected" : "Select type") : "Planned"}
               </span>
-            </span>
-            <span className="step-type-description">{item.description}</span>
-            <span className="step-type-action">
-              {item.status === "available" ? "Add step" : "Planned"}
-            </span>
-          </button>
-        );
-      })}
+            </button>
+          );
+        })}
+      </div>
+      <button
+        className="btn btn-primary w-100"
+        disabled={!canAddSelectedStep}
+        onClick={() => selectedItem?.type && onAddStep(selectedItem.type)}
+        type="button"
+      >
+        Add Step
+      </button>
     </div>
   );
 }

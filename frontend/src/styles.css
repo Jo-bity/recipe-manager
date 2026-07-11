@@ -161,6 +161,16 @@ button:disabled,
   transform: translateY(-1px);
 }
 
+.step-type-card-selected {
+  border-color: rgba(13, 110, 253, 0.75);
+  box-shadow: 0 0 0 0.16rem rgba(13, 110, 253, 0.14);
+}
+
+.step-type-card-selected .icon-shell {
+  background: var(--bs-primary);
+  color: #fff;
+}
+
 .step-type-card:disabled {
   cursor: not-allowed;
 }
