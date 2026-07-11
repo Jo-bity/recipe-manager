@@ -900,13 +900,13 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
         <fieldset className="border rounded p-3">
           <legend className="configuration-legend float-none w-auto px-2 fs-6 fw-semibold">
             <Icon name="crop" />
-            Capture area
+            Image area
           </legend>
           <SegmentedControl
             value={parameters.image_scope}
             options={[
-              { value: "full_battery", label: "Full battery" },
-              { value: "section", label: "Specific section" },
+              { value: "full_battery", label: "Full battery image" },
+              { value: "section", label: "Battery section image" },
             ]}
             onChange={(image_scope) => {
               onUpdate({
@@ -923,14 +923,14 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
             <div className="row g-3 mt-1">
               <div className="col-6">
                 <CoordinateInput
-                  label="Center X"
+                  label="Section center X"
                   value={parameters.center?.x ?? 0}
                   onChange={(x) => onUpdate({ ...action, parameters: { ...parameters, center: { x, y: parameters.center?.y ?? 0 } } })}
                 />
               </div>
               <div className="col-6">
                 <CoordinateInput
-                  label="Center Y"
+                  label="Section center Y"
                   value={parameters.center?.y ?? 0}
                   onChange={(y) => onUpdate({ ...action, parameters: { ...parameters, center: { x: parameters.center?.x ?? 0, y } } })}
                 />
@@ -957,13 +957,13 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
       <fieldset className="border rounded p-3">
         <legend className="configuration-legend float-none w-auto px-2 fs-6 fw-semibold">
           <Icon name="target" />
-          Targeting
+          Unscrewing mode
         </legend>
         <SegmentedControl
           value={parameters.mode}
           options={[
-            { value: "automatic", label: "Automatic detection" },
-            { value: "specific", label: "Specific screw position" },
+            { value: "automatic", label: "Automatic unscrewing" },
+            { value: "specific", label: "Specific unscrewing" },
           ]}
           onChange={(mode) => {
             onUpdate({
@@ -980,14 +980,14 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
           <div className="row g-3 mt-1">
             <div className="col-6">
               <CoordinateInput
-                label="Target X"
+                label="Screw target X"
                 value={parameters.target?.x ?? 0}
                 onChange={(x) => onUpdate({ ...action, parameters: { ...parameters, target: { x, y: parameters.target?.y ?? 0 } } })}
               />
             </div>
             <div className="col-6">
               <CoordinateInput
-                label="Target Y"
+                label="Screw target Y"
                 value={parameters.target?.y ?? 0}
                 onChange={(y) => onUpdate({ ...action, parameters: { ...parameters, target: { x: parameters.target?.x ?? 0, y } } })}
               />
@@ -1106,8 +1106,8 @@ function UnscrewingPreview({
       </div>
       <div className="preview-caption">
         {parameters.mode === "specific"
-          ? `Specific screw target at ${formatCoordinate(parameters.target)}`
-          : "Automatic target detection across visible screws"}
+          ? `Specific unscrewing at screw target ${formatCoordinate(parameters.target)}`
+          : "Automatic unscrewing across detected screws"}
       </div>
     </div>
   );
@@ -1209,11 +1209,12 @@ function actionLabel(action: RecipeAction): string {
 
 function actionSummary(action: RecipeAction): string {
   if (action.type === "take_image") {
-    const scope = action.parameters.image_scope === "full_battery" ? "full battery" : `section at ${formatCoordinate(action.parameters.center)}`;
+    const scope =
+      action.parameters.image_scope === "full_battery" ? "full battery image" : `battery section image at ${formatCoordinate(action.parameters.center)}`;
     return `${scope}${action.parameters.include_pointcloud ? " with point cloud" : ""}`;
   }
-  if (action.parameters.mode === "automatic") return "automatic target detection";
-  return `target ${formatCoordinate(action.parameters.target)}`;
+  if (action.parameters.mode === "automatic") return "automatic unscrewing";
+  return `specific unscrewing at ${formatCoordinate(action.parameters.target)}`;
 }
 
 function formatCoordinate(coordinate?: Coordinate): string {

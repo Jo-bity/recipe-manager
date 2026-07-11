@@ -81,7 +81,7 @@ The Recipe Editor area where a Robotics Technician selects a Step type and expli
 _Avoid_: Inline action form, hidden auto-add behavior
 
 **Step Configuration**:
-The Recipe Editor area for explaining and editing the parameters of the currently selected Step's Action in technician language. XY coordinates can be edited with number inputs or by selecting the preview image when a section or specific target is active.
+The Recipe Editor area for explaining and editing the parameters of the currently selected Step's Action in technician language. Take Image configuration distinguishes full-battery image capture from battery section image capture. Unscrewing configuration distinguishes automatic unscrewing from specific unscrewing. XY coordinates can be edited with number inputs or by selecting the preview image when a section or specific target is active.
 _Avoid_: Raw JSON editor, inline add form, robot command form
 
 **Adapter Preview**:

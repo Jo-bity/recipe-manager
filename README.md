@@ -7,8 +7,8 @@ API-first MVP for creating technician-safe robot recipes, exporting vendor-neutr
 1. In **Setup**, create or rename the Recipe. Battery layout and process constraint fields are visible as outlook placeholders for future context.
 2. In **Add Step**, choose an available Step type and click **Add Step**. `Take Image` can be created as `2D image only` or `Image + point cloud`; this image output decision belongs to image input, not later Step tuning.
 3. In **Step Configuration**, tune the selected Step's atomic Action:
-   - `Take Image`: choose full-battery capture or a specific section. For a section, set `center.x/y` with the numeric fields or by selecting the preview image.
-   - `Unscrewing`: choose automatic target detection or a specific screw position. For a specific screw, set `target.x/y` with the numeric fields or by selecting the preview image.
+   - `Take Image`: choose the image area: full-battery image or battery section image. For a section, set `center.x/y` with the numeric fields or by selecting the preview image.
+   - `Unscrewing`: choose the unscrewing mode: automatic unscrewing or specific unscrewing. For specific unscrewing, set `target.x/y` with the numeric fields or by selecting the preview image.
    - Image source and tool profile are shown as Step Configuration outlook fields.
 4. In **Step List**, review the resulting ordered Steps, select a Step for configuration, move Steps up/down, or remove them.
 5. Use **Validate** before exchange or preview to fail fast on incomplete Recipes.
@@ -20,7 +20,7 @@ API-first MVP for creating technician-safe robot recipes, exporting vendor-neutr
 Importable Recipe JSON examples live in `sample-data/`:
 
 - `battery-pack-screw-removal.json`: short happy-path demo with full-battery imaging and automatic unscrewing.
-- `section-rework-layout.json`: layout-specific demo with section imaging, point cloud capture, a specific screw target, and a follow-up image.
+- `section-rework-layout.json`: layout-specific demo with section imaging, point cloud capture, specific unscrewing, and a follow-up image.
 
 To try one in the UI, open **Recipe JSON**, paste the file contents into the import field, and click **Import**.
 
