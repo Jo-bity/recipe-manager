@@ -571,7 +571,7 @@ function EditorView({
       <WorkflowGuide activeRecipe={activeRecipe} selectedStep={selectedStep} />
 
       <div className="row g-4 align-items-start">
-        <section className="col-12 col-xxl-4">
+        <section className="col-12 col-xl-6 col-xxl-3">
           <div className="card h-100 border-primary-subtle state-card state-card-current">
             <SectionHeading number="1" title="Setup" badge={activeRecipe ? "Editable" : "Start here"} />
             <div className="card-body">
@@ -638,11 +638,19 @@ function EditorView({
           </div>
         </section>
 
-        <section className="col-12 col-xxl-4">
+        <section className="col-12 col-xl-6 col-xxl-3">
           <div className={`card h-100 border-primary-subtle state-card ${activeRecipe ? "state-card-current" : "state-card-disabled"}`}>
-            <SectionHeading number="2" title="Step List" badge={activeRecipe ? "Add or reorder" : "Create recipe"} />
+            <SectionHeading number="2" title="Add Step" badge={activeRecipe ? "Step type" : "Create recipe"} />
             <div className="card-body">
               <StepCatalog activeRecipe={activeRecipe} onAddStep={onAddStep} />
+            </div>
+          </div>
+        </section>
+
+        <section className="col-12 col-xl-6 col-xxl-3">
+          <div className={`card h-100 border-primary-subtle state-card ${activeRecipe ? "state-card-current" : "state-card-disabled"}`}>
+            <SectionHeading number="3" title="Step List" badge={activeRecipe ? "Order" : "Create recipe"} />
+            <div className="card-body">
               <div className="list-group action-list">
                 {activeRecipe ? (
                   activeRecipe.steps.length > 0 ? (
@@ -670,9 +678,9 @@ function EditorView({
           </div>
         </section>
 
-        <section className="col-12 col-xxl-4">
+        <section className="col-12 col-xl-6 col-xxl-3">
           <div className={`card h-100 border-primary-subtle state-card ${selectedStep ? "state-card-current" : "state-card-disabled"}`}>
-            <SectionHeading number="3" title="Step Configuration" badge={selectedAction ? actionLabel(selectedAction) : "Select step"} />
+            <SectionHeading number="4" title="Step Configuration" badge={selectedAction ? actionLabel(selectedAction) : "Select step"} />
             <div className="card-body">
               {selectedAction ? <ActionConfiguration action={selectedAction} onUpdate={onUpdateAction} /> : <EmptyState label="Add or select a step to configure it." />}
             </div>
@@ -684,10 +692,11 @@ function EditorView({
 }
 
 function WorkflowGuide({ activeRecipe, selectedStep }: { activeRecipe: Recipe | null; selectedStep: RecipeStep | null }) {
-  const currentLabel = !activeRecipe ? "Setup" : activeRecipe.steps.length === 0 ? "Steps" : selectedStep ? "Configure" : "Steps";
+  const currentLabel = !activeRecipe ? "Setup" : activeRecipe.steps.length === 0 ? "Add" : selectedStep ? "Configure" : "Order";
   const items = [
     { label: "Setup", done: Boolean(activeRecipe?.name), current: currentLabel === "Setup" },
-    { label: "Steps", done: Boolean(activeRecipe && activeRecipe.steps.length > 0), current: currentLabel === "Steps" },
+    { label: "Add", done: Boolean(activeRecipe && activeRecipe.steps.length > 0), current: currentLabel === "Add" },
+    { label: "Order", done: Boolean(activeRecipe && activeRecipe.steps.length > 0), current: currentLabel === "Order" },
     { label: "Configure", done: Boolean(selectedStep), current: currentLabel === "Configure" },
   ];
 
@@ -696,7 +705,7 @@ function WorkflowGuide({ activeRecipe, selectedStep }: { activeRecipe: Recipe | 
       <div className="card-body py-3">
         <div className="row g-2">
           {items.map((item, index) => (
-            <div className="col-12 col-md-4" key={item.label}>
+            <div className="col-12 col-md-3" key={item.label}>
               <div className={`workflow-step ${item.done ? "complete" : ""} ${item.current ? "current" : ""}`}>
                 <span className="badge rounded-pill text-bg-primary">{index + 1}</span>
                 <span className="fw-semibold">{item.label}</span>
@@ -832,6 +841,9 @@ function StepCatalog({
               </span>
             </span>
             <span className="step-type-description">{item.description}</span>
+            <span className="step-type-action">
+              {item.status === "available" ? "Add step" : "Planned"}
+            </span>
           </button>
         );
       })}

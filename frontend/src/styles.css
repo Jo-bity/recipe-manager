@@ -182,6 +182,18 @@ button:disabled,
   margin-top: 0.35rem;
 }
 
+.step-type-action {
+  color: var(--bs-primary);
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-top: 0.65rem;
+}
+
+.step-type-card-planned .step-type-action {
+  color: var(--bs-secondary-color);
+}
+
 .configuration-legend {
   align-items: center;
   display: inline-flex;
