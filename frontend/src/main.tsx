@@ -64,6 +64,11 @@ type RecipeDocument = {
 };
 
 type WorkspaceView = "editor" | "preview" | "json";
+type ValidationFeedback = {
+  status: "success" | "error";
+  title: string;
+  details: string[];
+};
 type IconName = "camera" | "wrench" | "scan" | "gripper" | "check" | "crop" | "layers" | "target";
 type StepCatalogItem = {
   type?: RecipeAction["type"];
@@ -232,6 +237,7 @@ function App() {
   const [workspaceView, setWorkspaceView] = useState<WorkspaceView>("editor");
   const [importJson, setImportJson] = useState("");
   const [output, setOutput] = useState("{}");
+  const [validationFeedback, setValidationFeedback] = useState<ValidationFeedback | null>(null);
 
   const activeRecipe = useMemo(
     () => recipes.find((recipe) => recipe.id === activeRecipeId) ?? null,
@@ -277,6 +283,7 @@ function App() {
   function applyRecipe(recipe: Recipe) {
     setRecipes((current) => current.map((candidate) => (candidate.id === recipe.id ? recipe : candidate)));
     setActiveRecipeId(recipe.id);
+    setValidationFeedback(null);
   }
 
   async function createRecipe(event: FormEvent) {
@@ -288,6 +295,7 @@ function App() {
       });
       setRecipeName("");
       setSelectedStepId(null);
+      setValidationFeedback(null);
       await loadRecipes(recipe.id);
     } catch (error) {
       setOutput((error as Error).message);
@@ -300,6 +308,7 @@ function App() {
     setSetupName("");
     setRecipeName("");
     setWorkspaceView("editor");
+    setValidationFeedback(null);
   }
 
   async function renameRecipe(event: FormEvent) {
@@ -390,8 +399,15 @@ function App() {
     if (!activeRecipe) return;
     try {
       const validation = await api(`/recipes/${activeRecipe.id}/validate`, { method: "POST" });
-      setOutput(JSON.stringify(validation, null, 2));
+      const formatted = JSON.stringify(validation, null, 2);
+      setValidationFeedback({
+        status: "success",
+        title: "Recipe is valid for export and adapter preview.",
+        details: [`${activeRecipe.steps.length} ordered step${activeRecipe.steps.length === 1 ? "" : "s"} validated.`],
+      });
+      setOutput(formatted);
     } catch (error) {
+      setValidationFeedback(validationFeedbackFromError(error as Error));
       setOutput((error as Error).message);
     }
   }
@@ -404,6 +420,7 @@ function App() {
         body: JSON.stringify(document),
       });
       setSelectedStepId(recipe.steps[0]?.id ?? null);
+      setValidationFeedback(null);
       await loadRecipes(recipe.id);
     } catch (error) {
       setOutput((error as Error).message);
@@ -495,6 +512,8 @@ function App() {
                     </button>
                   </li>
                 </ul>
+
+                {workspaceView === "editor" ? <ValidationFeedbackBanner feedback={validationFeedback} /> : null}
 
                 {workspaceView === "editor" ? (
                   <EditorView
@@ -847,6 +866,23 @@ function SectionHeading({ number, title, badge }: { number: string; title: strin
 
 function EmptyState({ label }: { label: string }) {
   return <div className="alert alert-light border mb-0 text-secondary">{label}</div>;
+}
+
+function ValidationFeedbackBanner({ feedback }: { feedback: ValidationFeedback | null }) {
+  if (!feedback) return null;
+  const alertClass = feedback.status === "success" ? "alert-success" : "alert-danger";
+  return (
+    <div className={`alert ${alertClass} border mb-4`} role="status">
+      <div className="fw-semibold">{feedback.title}</div>
+      {feedback.details.length > 0 ? (
+        <ul className="mb-0 mt-2 ps-3">
+          {feedback.details.map((detail) => (
+            <li key={detail}>{detail}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
 }
 
 function StepCatalog({
@@ -1268,6 +1304,35 @@ function isActionComplete(action: EditableRecipeAction): boolean {
 
 function isNonNegativeCoordinate(coordinate?: Coordinate): boolean {
   return Boolean(coordinate && coordinate.x >= 0 && coordinate.y >= 0);
+}
+
+function validationFeedbackFromError(error: Error): ValidationFeedback {
+  const fallback = {
+    status: "error" as const,
+    title: "Recipe validation failed.",
+    details: [error.message],
+  };
+  try {
+    const detail = JSON.parse(error.message);
+    if (!detail || typeof detail !== "object") return fallback;
+    const message = typeof detail.message === "string" ? detail.message : "Recipe validation failed.";
+    const errors = Array.isArray(detail.errors) ? detail.errors : [];
+    const details = errors
+      .map((fieldError) => {
+        if (!fieldError || typeof fieldError !== "object") return null;
+        const path = typeof fieldError.path === "string" ? fieldError.path : "recipe";
+        const fieldMessage = typeof fieldError.message === "string" ? fieldError.message : "Invalid value.";
+        return `${path}: ${fieldMessage}`;
+      })
+      .filter((detail): detail is string => Boolean(detail));
+    return {
+      status: "error",
+      title: message,
+      details: details.length > 0 ? details : [message],
+    };
+  } catch {
+    return fallback;
+  }
 }
 
 function formatCoordinate(coordinate?: Coordinate): string {
