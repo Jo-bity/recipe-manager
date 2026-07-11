@@ -99,6 +99,15 @@ function defaultStep(type: RecipeAction["type"]): RecipeStepInput {
   return { actions: [defaultAction(type)] };
 }
 
+function recipeFileName(recipeName: string) {
+  const slug = recipeName
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return `${slug || "recipe"}.json`;
+}
+
 function App() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [activeRecipeId, setActiveRecipeId] = useState<string | null>(null);
@@ -278,6 +287,19 @@ function App() {
     }
   }
 
+  function downloadRecipeJson() {
+    if (!importJson.trim()) return;
+    const blob = new Blob([importJson], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = recipeFileName(activeRecipe?.name ?? "recipe");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   async function previewCommands(vendor: "company_a" | "company_b") {
     if (!activeRecipe) return;
     try {
@@ -416,7 +438,15 @@ function App() {
 
                 {workspaceView === "preview" ? <PreviewView activeRecipe={activeRecipe} output={output} onPreviewCommands={previewCommands} /> : null}
 
-                {workspaceView === "json" ? <JsonView importJson={importJson} output={output} onImportJsonChange={setImportJson} onImportRecipe={importRecipe} /> : null}
+                {workspaceView === "json" ? (
+                  <JsonView
+                    importJson={importJson}
+                    output={output}
+                    onImportJsonChange={setImportJson}
+                    onImportRecipe={importRecipe}
+                    onDownloadRecipeJson={downloadRecipeJson}
+                  />
+                ) : null}
               </div>
             </div>
           </section>
@@ -613,11 +643,13 @@ function JsonView({
   output,
   onImportJsonChange,
   onImportRecipe,
+  onDownloadRecipeJson,
 }: {
   importJson: string;
   output: string;
   onImportJsonChange: (value: string) => void;
   onImportRecipe: () => void;
+  onDownloadRecipeJson: () => void;
 }) {
   return (
     <div className="row g-4">
@@ -632,9 +664,14 @@ function JsonView({
               value={importJson}
               onChange={(event) => onImportJsonChange(event.target.value)}
             />
-            <button className="btn btn-primary align-self-start" onClick={onImportRecipe}>
-              Import
-            </button>
+            <div className="btn-toolbar gap-2">
+              <button className="btn btn-primary" onClick={onImportRecipe}>
+                Import
+              </button>
+              <button className="btn btn-outline-primary" disabled={!importJson.trim()} onClick={onDownloadRecipeJson}>
+                Download JSON
+              </button>
+            </div>
           </div>
         </div>
       </section>
