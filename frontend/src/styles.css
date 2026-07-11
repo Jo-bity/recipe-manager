@@ -15,11 +15,6 @@ body {
   min-height: calc(100vh - 8rem);
 }
 
-.recipe-list {
-  max-height: calc(100vh - 16rem);
-  overflow: auto;
-}
-
 .state-card {
   transition: border-color 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
 }
@@ -99,6 +94,45 @@ button:disabled,
 .action-select:hover,
 .action-select:focus {
   background: transparent;
+}
+
+.step-catalog {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.step-type-card {
+  background: #fff;
+  border: 1px solid rgba(13, 110, 253, 0.28);
+  border-radius: var(--bs-border-radius);
+  color: var(--bs-body-color);
+  padding: 0.85rem;
+  text-align: left;
+  transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+  width: 100%;
+}
+
+.step-type-card:not(:disabled):hover,
+.step-type-card:not(:disabled):focus {
+  border-color: rgba(13, 110, 253, 0.65);
+  box-shadow: 0 0 0 0.16rem rgba(13, 110, 253, 0.1);
+  transform: translateY(-1px);
+}
+
+.step-type-card:disabled {
+  cursor: not-allowed;
+}
+
+.step-type-card-planned {
+  background: #f8f9fa;
+  border-color: #dee2e6;
+}
+
+.step-type-description {
+  color: var(--bs-secondary-color);
+  display: block;
+  font-size: 0.88rem;
+  margin-top: 0.35rem;
 }
 
 .segmented-control .btn {

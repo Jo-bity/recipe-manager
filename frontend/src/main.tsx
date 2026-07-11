@@ -61,10 +61,51 @@ type RecipeDocument = {
 };
 
 type WorkspaceView = "editor" | "preview" | "json";
+type StepCatalogItem = {
+  type?: RecipeAction["type"];
+  label: string;
+  group: string;
+  description: string;
+  status: "available" | "planned";
+};
 
 const RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 const API_BASE_URL = RAW_API_BASE_URL.replace(/\/$/, "");
 const API_DOCS_URL = `${API_BASE_URL || "http://localhost:8000"}/docs`;
+const STEP_CATALOG: StepCatalogItem[] = [
+  {
+    type: "take_image",
+    label: "Take image",
+    group: "Inspection",
+    description: "Capture the full battery or a focused section before or after work.",
+    status: "available",
+  },
+  {
+    type: "unscrewing",
+    label: "Unscrewing",
+    group: "Fastener removal",
+    description: "Remove screws automatically or at a specific coordinate.",
+    status: "available",
+  },
+  {
+    label: "Detect screws",
+    group: "Inspection",
+    description: "Locate screw candidates from an image before removal.",
+    status: "planned",
+  },
+  {
+    label: "Pick component",
+    group: "Handling",
+    description: "Pick a loosened battery component from a known position.",
+    status: "planned",
+  },
+  {
+    label: "Verify removal",
+    group: "Inspection",
+    description: "Capture proof that the target screw or component was removed.",
+    status: "planned",
+  },
+];
 
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -179,6 +220,14 @@ function App() {
     } catch (error) {
       setOutput((error as Error).message);
     }
+  }
+
+  function startNewRecipe() {
+    setActiveRecipeId(null);
+    setSelectedStepId(null);
+    setSetupName("");
+    setRecipeName("");
+    setWorkspaceView("editor");
   }
 
   async function renameRecipe(event: FormEvent) {
@@ -332,66 +381,20 @@ function App() {
 
       <div className="container-fluid p-4">
         <div className="row g-4">
-          <aside className="col-12 col-xl-3">
-            <div className={`card shadow-sm state-card ${activeRecipe ? "" : "state-card-current"}`}>
-              <div className="card-header bg-white">
-                <div className="d-flex align-items-center justify-content-between gap-2">
-                  <h2 className="h5 mb-0">Recipes</h2>
-                  {!activeRecipe ? <span className="badge text-bg-primary">Start here</span> : null}
-                </div>
-              </div>
-              <div className="card-body">
-                <form className="vstack gap-2" onSubmit={createRecipe}>
-                  <label className="form-label mb-0" htmlFor="new-recipe-name">
-                    New recipe
-                  </label>
-                  <input
-                    id="new-recipe-name"
-                    className="form-control"
-                    required
-                    maxLength={120}
-                    placeholder="Battery screw removal"
-                    value={recipeName}
-                    onChange={(event) => setRecipeName(event.target.value)}
-                  />
-                  <button className="btn btn-primary" type="submit">
-                    Create recipe
-                  </button>
-                </form>
-              </div>
-              <div className="list-group list-group-flush recipe-list">
-                {recipes.length > 0 ? (
-                  recipes.map((recipe) => (
-                    <button
-                      className={`list-group-item list-group-item-action ${recipe.id === activeRecipeId ? "active" : ""}`}
-                      key={recipe.id}
-                      onClick={() => {
-                        setActiveRecipeId(recipe.id);
-                        setSelectedStepId(recipe.steps[0]?.id ?? null);
-                      }}
-                    >
-                      <span className="d-block fw-semibold text-truncate">{recipe.name}</span>
-                      <span className="badge text-bg-light mt-2">{recipe.steps.length} steps</span>
-                    </button>
-                  ))
-                ) : (
-                  <div className="list-group-item text-secondary">No recipes yet.</div>
-                )}
-              </div>
-            </div>
-          </aside>
-
-          <section className="col-12 col-xl-9">
+          <section className="col-12">
             <div className="card shadow-sm workspace-card">
               <div className="card-header bg-white">
                 <div className="d-flex flex-column flex-lg-row gap-3 justify-content-between align-items-lg-center">
                   <div>
-                    <h2 className="h4 mb-1">{activeRecipe?.name ?? "Select a recipe"}</h2>
+                    <h2 className="h4 mb-1">{activeRecipe?.name ?? "Create a recipe"}</h2>
                     <span className="text-secondary">
-                      {activeRecipe ? `${activeRecipe.steps.length} ordered steps` : "Create or select a recipe to begin."}
+                      {activeRecipe ? `${activeRecipe.steps.length} ordered steps` : "Use Setup to start the demo workflow."}
                     </span>
                   </div>
                   <div className="btn-toolbar gap-2">
+                    <button className="btn btn-outline-secondary" disabled={!activeRecipe} onClick={startNewRecipe}>
+                      New recipe
+                    </button>
                     <button className="btn btn-outline-success" disabled={!activeRecipe} onClick={validateRecipe}>
                       Validate
                     </button>
@@ -424,10 +427,13 @@ function App() {
                 {workspaceView === "editor" ? (
                   <EditorView
                     activeRecipe={activeRecipe}
+                    recipeName={recipeName}
                     setupName={setupName}
                     selectedStep={selectedStep}
                     selectedAction={selectedAction}
                     selectedStepId={selectedStep?.id ?? null}
+                    onRecipeNameChange={setRecipeName}
+                    onCreateRecipe={createRecipe}
                     onSetupNameChange={setSetupName}
                     onRenameRecipe={renameRecipe}
                     onAddStep={addStep}
@@ -460,10 +466,13 @@ function App() {
 
 function EditorView({
   activeRecipe,
+  recipeName,
   setupName,
   selectedStep,
   selectedAction,
   selectedStepId,
+  onRecipeNameChange,
+  onCreateRecipe,
   onSetupNameChange,
   onRenameRecipe,
   onAddStep,
@@ -473,10 +482,13 @@ function EditorView({
   onUpdateAction,
 }: {
   activeRecipe: Recipe | null;
+  recipeName: string;
   setupName: string;
   selectedStep: RecipeStep | null;
   selectedAction: RecipeAction | null;
   selectedStepId: string | null;
+  onRecipeNameChange: (name: string) => void;
+  onCreateRecipe: (event: FormEvent) => void;
   onSetupNameChange: (name: string) => void;
   onRenameRecipe: (event: FormEvent) => void;
   onAddStep: (type: RecipeAction["type"]) => void;
@@ -491,10 +503,31 @@ function EditorView({
 
       <div className="row g-4 align-items-start">
         <section className="col-12 col-xxl-4">
-          <div className={`card h-100 border-primary-subtle state-card ${activeRecipe ? "state-card-current" : "state-card-disabled"}`}>
-            <SectionHeading number="1" title="Setup" badge={activeRecipe ? "Editable" : "Select recipe"} />
+          <div className="card h-100 border-primary-subtle state-card state-card-current">
+            <SectionHeading number="1" title="Setup" badge={activeRecipe ? "Editable" : "Start here"} />
             <div className="card-body">
-              <form className="vstack gap-3" onSubmit={onRenameRecipe}>
+              {!activeRecipe ? (
+                <form className="vstack gap-3" onSubmit={onCreateRecipe}>
+                  <div>
+                    <label className="form-label" htmlFor="new-recipe-name">
+                      Recipe name
+                    </label>
+                    <input
+                      id="new-recipe-name"
+                      className="form-control"
+                      required
+                      maxLength={120}
+                      placeholder="Battery screw removal"
+                      value={recipeName}
+                      onChange={(event) => onRecipeNameChange(event.target.value)}
+                    />
+                  </div>
+                  <button className="btn btn-primary" type="submit">
+                    Create recipe
+                  </button>
+                </form>
+              ) : (
+                <form className="vstack gap-3" onSubmit={onRenameRecipe}>
                 <div>
                   <label className="form-label" htmlFor="setup-name">
                     Recipe name
@@ -531,22 +564,16 @@ function EditorView({
                   Save setup
                 </button>
               </form>
+              )}
             </div>
           </div>
         </section>
 
         <section className="col-12 col-xxl-4">
           <div className={`card h-100 border-primary-subtle state-card ${activeRecipe ? "state-card-current" : "state-card-disabled"}`}>
-            <SectionHeading number="2" title="Step List" badge={activeRecipe ? "Add or reorder" : "Select recipe"} />
+            <SectionHeading number="2" title="Step List" badge={activeRecipe ? "Add or reorder" : "Create recipe"} />
             <div className="card-body">
-              <div className="btn-group w-100 mb-3" role="group" aria-label="Add step">
-                <button className="btn btn-outline-primary" disabled={!activeRecipe} onClick={() => onAddStep("take_image")}>
-                  Take Image
-                </button>
-                <button className="btn btn-outline-primary" disabled={!activeRecipe} onClick={() => onAddStep("unscrewing")}>
-                  Unscrewing
-                </button>
-              </div>
+              <StepCatalog activeRecipe={activeRecipe} onAddStep={onAddStep} />
               <div className="list-group action-list">
                 {activeRecipe ? (
                   activeRecipe.steps.length > 0 ? (
@@ -567,7 +594,7 @@ function EditorView({
                     <EmptyState label="No steps yet." />
                   )
                 ) : (
-                  <EmptyState label="No recipe selected." />
+                  <EmptyState label="Create a recipe in Setup first." />
                 )}
               </div>
             </div>
@@ -703,6 +730,39 @@ function SectionHeading({ number, title, badge }: { number: string; title: strin
 
 function EmptyState({ label }: { label: string }) {
   return <div className="alert alert-light border mb-0 text-secondary">{label}</div>;
+}
+
+function StepCatalog({
+  activeRecipe,
+  onAddStep,
+}: {
+  activeRecipe: Recipe | null;
+  onAddStep: (type: RecipeAction["type"]) => void;
+}) {
+  return (
+    <div className="step-catalog mb-3">
+      {STEP_CATALOG.map((item) => {
+        const available = Boolean(activeRecipe && item.status === "available" && item.type);
+        return (
+          <button
+            className={`step-type-card ${item.status === "planned" ? "step-type-card-planned" : ""}`}
+            disabled={!available}
+            key={item.label}
+            onClick={() => item.type && onAddStep(item.type)}
+            type="button"
+          >
+            <span className="d-flex justify-content-between align-items-center gap-2">
+              <span className="fw-semibold">{item.label}</span>
+              <span className={`badge ${item.status === "available" ? "text-bg-primary" : "text-bg-secondary"}`}>
+                {item.status === "available" ? item.group : "Outlook"}
+              </span>
+            </span>
+            <span className="step-type-description">{item.description}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpdate: (action: RecipeAction) => void }) {
