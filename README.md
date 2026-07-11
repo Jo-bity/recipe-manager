@@ -6,8 +6,8 @@ API-first MVP for creating technician-safe robot recipes, exporting vendor-neutr
 
 1. Create or select a Recipe from the sidebar.
 2. In **Setup**, give the Recipe a clear operational name. Battery layout and process constraint fields are shown as outlook placeholders for future context.
-3. In **Action List**, add the intended robot procedure as ordered Actions, starting with `Take Image` or `Unscrewing`.
-4. Select an Action and configure it in **Action Configuration** using technician-facing groups:
+3. In **Step List**, add the intended robot procedure as ordered Steps, starting with `Take Image` or `Unscrewing`. Each Step contains one or more atomic Actions; the MVP creates one Action per Step.
+4. Select a Step and configure its Action in **Step Configuration** using technician-facing groups:
    - `Take Image`: choose the capture area and whether depth data should be captured as a point cloud.
    - `Unscrewing`: choose automatic target detection or a specific screw position.
 5. Use **Validate** before exchange or preview to fail fast on incomplete Recipes.
@@ -69,8 +69,8 @@ PYTHONPATH=backend/src python -m unittest discover -s backend/tests -v
 Core:
 
 - Recipe CRUD
-- Action add/update/delete/reorder
-- Strict validation for `take_image` and `unscrewing` Action parameters
+- Step add/update/delete/reorder
+- Strict validation for `take_image` and `unscrewing` Action parameters nested inside Steps
 - Canonical Recipe JSON import/export
 - Vendor command preview for Company A and Company B
 - Small technician-facing React UI

@@ -18,7 +18,7 @@ app = FastAPI(
     openapi_tags=[
         {
             "name": "recipes",
-            "description": "Create and manage vendor-neutral Recipes and their ordered Actions.",
+            "description": "Create and manage vendor-neutral Recipes and their ordered Steps.",
         },
         {
             "name": "recipe validation",

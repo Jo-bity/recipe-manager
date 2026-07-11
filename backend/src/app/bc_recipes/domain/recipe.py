@@ -133,13 +133,12 @@ class UnscrewingAction(BaseModel):
 RecipeAction = Annotated[TakeImageAction | UnscrewingAction, Field(discriminator="type")]
 
 
-class RecipeDocument(BaseModel):
+class RecipeStep(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         json_schema_extra={
             "example": {
-                "schema_version": "1.0",
-                "name": "Battery pack screw removal",
+                "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
                 "actions": [
                     {
                         "id": "11111111-1111-1111-1111-111111111111",
@@ -149,14 +148,56 @@ class RecipeDocument(BaseModel):
                             "image_scope": "section",
                             "center": {"x": 120, "y": 80},
                         },
+                    }
+                ],
+            }
+        },
+    )
+
+    id: UUID = Field(
+        default_factory=uuid4,
+        description="Stable Step identifier. Preserved during import/export when provided.",
+    )
+    actions: list[RecipeAction] = Field(
+        min_length=1,
+        description="Ordered atomic Actions that together execute this Step.",
+    )
+
+
+class RecipeDocument(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "schema_version": "1.0",
+                "name": "Battery pack screw removal",
+                "steps": [
+                    {
+                        "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                        "actions": [
+                            {
+                                "id": "11111111-1111-1111-1111-111111111111",
+                                "type": "take_image",
+                                "parameters": {
+                                    "include_pointcloud": True,
+                                    "image_scope": "section",
+                                    "center": {"x": 120, "y": 80},
+                                },
+                            }
+                        ],
                     },
                     {
-                        "id": "22222222-2222-2222-2222-222222222222",
-                        "type": "unscrewing",
-                        "parameters": {
-                            "mode": "specific",
-                            "target": {"x": 120, "y": 80},
-                        },
+                        "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                        "actions": [
+                            {
+                                "id": "22222222-2222-2222-2222-222222222222",
+                                "type": "unscrewing",
+                                "parameters": {
+                                    "mode": "specific",
+                                    "target": {"x": 120, "y": 80},
+                                },
+                            }
+                        ],
                     },
                 ],
             }
@@ -172,9 +213,9 @@ class RecipeDocument(BaseModel):
         max_length=120,
         description="Technician-facing Recipe name.",
     )
-    actions: list[RecipeAction] = Field(
+    steps: list[RecipeStep] = Field(
         default_factory=list,
-        description="Ordered Actions. List order is the intended recipe sequence.",
+        description="Ordered Steps. Each Step contains one or more atomic Actions.",
     )
 
 

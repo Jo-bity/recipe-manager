@@ -32,12 +32,22 @@ type UnscrewingAction = {
 };
 
 type RecipeAction = TakeImageAction | UnscrewingAction;
+type RecipeActionInput = Omit<TakeImageAction, "id"> | Omit<UnscrewingAction, "id">;
+
+type RecipeStep = {
+  id: string;
+  actions: RecipeAction[];
+};
+
+type RecipeStepInput = {
+  actions: RecipeActionInput[];
+};
 
 type Recipe = {
   id: string;
   schema_version: "1.0";
   name: string;
-  actions: RecipeAction[];
+  steps: RecipeStep[];
   created_at: string;
   updated_at: string;
 };
@@ -45,7 +55,7 @@ type Recipe = {
 type RecipeDocument = {
   schema_version: "1.0";
   name: string;
-  actions: RecipeAction[];
+  steps: RecipeStep[];
 };
 
 type WorkspaceView = "editor" | "preview" | "json";
@@ -67,7 +77,7 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-function defaultAction(type: RecipeAction["type"]): Omit<RecipeAction, "id"> {
+function defaultAction(type: RecipeAction["type"]): RecipeActionInput {
   if (type === "take_image") {
     return {
       type: "take_image",
@@ -85,10 +95,14 @@ function defaultAction(type: RecipeAction["type"]): Omit<RecipeAction, "id"> {
   };
 }
 
+function defaultStep(type: RecipeAction["type"]): RecipeStepInput {
+  return { actions: [defaultAction(type)] };
+}
+
 function App() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [activeRecipeId, setActiveRecipeId] = useState<string | null>(null);
-  const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
+  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [recipeName, setRecipeName] = useState("");
   const [setupName, setSetupName] = useState("");
   const [workspaceView, setWorkspaceView] = useState<WorkspaceView>("editor");
@@ -100,10 +114,12 @@ function App() {
     [activeRecipeId, recipes],
   );
 
-  const selectedAction = useMemo(() => {
+  const selectedStep = useMemo(() => {
     if (!activeRecipe) return null;
-    return activeRecipe.actions.find((action) => action.id === selectedActionId) ?? activeRecipe.actions[0] ?? null;
-  }, [activeRecipe, selectedActionId]);
+    return activeRecipe.steps.find((step) => step.id === selectedStepId) ?? activeRecipe.steps[0] ?? null;
+  }, [activeRecipe, selectedStepId]);
+
+  const selectedAction = selectedStep?.actions[0] ?? null;
 
   useEffect(() => {
     loadRecipes().catch((error) => setOutput(error.message));
@@ -112,17 +128,17 @@ function App() {
   useEffect(() => {
     setSetupName(activeRecipe?.name ?? "");
     if (!activeRecipe) {
-      setSelectedActionId(null);
+      setSelectedStepId(null);
       return;
     }
-    if (activeRecipe.actions.length === 0) {
-      setSelectedActionId(null);
+    if (activeRecipe.steps.length === 0) {
+      setSelectedStepId(null);
       return;
     }
-    if (!selectedActionId || !activeRecipe.actions.some((action) => action.id === selectedActionId)) {
-      setSelectedActionId(activeRecipe.actions[0].id);
+    if (!selectedStepId || !activeRecipe.steps.some((step) => step.id === selectedStepId)) {
+      setSelectedStepId(activeRecipe.steps[0].id);
     }
-  }, [activeRecipe?.id, activeRecipe?.name, activeRecipe?.actions, selectedActionId]);
+  }, [activeRecipe?.id, activeRecipe?.name, activeRecipe?.steps, selectedStepId]);
 
   async function loadRecipes(selectRecipeId = activeRecipeId) {
     const loaded = await api<Recipe[]>("/recipes");
@@ -147,7 +163,7 @@ function App() {
         body: JSON.stringify({ name: recipeName }),
       });
       setRecipeName("");
-      setSelectedActionId(null);
+      setSelectedStepId(null);
       await loadRecipes(recipe.id);
     } catch (error) {
       setOutput((error as Error).message);
@@ -168,57 +184,58 @@ function App() {
     }
   }
 
-  async function addAction(type: RecipeAction["type"]) {
+  async function addStep(type: RecipeAction["type"]) {
     if (!activeRecipe) return;
     try {
-      const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/actions`, {
+      const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/steps`, {
         method: "POST",
-        body: JSON.stringify(defaultAction(type)),
+        body: JSON.stringify(defaultStep(type)),
       });
-      const addedAction = recipe.actions[recipe.actions.length - 1];
+      const addedStep = recipe.steps[recipe.steps.length - 1];
       applyRecipe(recipe);
-      setSelectedActionId(addedAction?.id ?? null);
+      setSelectedStepId(addedStep?.id ?? null);
     } catch (error) {
       setOutput((error as Error).message);
     }
   }
 
-  async function updateAction(action: RecipeAction) {
-    if (!activeRecipe) return;
+  async function updateSelectedStepAction(action: RecipeAction) {
+    if (!activeRecipe || !selectedStep) return;
     try {
-      const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/actions/${action.id}`, {
+      const updatedStep: RecipeStep = { ...selectedStep, actions: [action, ...selectedStep.actions.slice(1)] };
+      const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/steps/${selectedStep.id}`, {
         method: "PATCH",
-        body: JSON.stringify(action),
+        body: JSON.stringify(updatedStep),
       });
       applyRecipe(recipe);
-      setSelectedActionId(action.id);
+      setSelectedStepId(selectedStep.id);
     } catch (error) {
       setOutput((error as Error).message);
     }
   }
 
-  async function moveAction(actionId: string, position: number) {
+  async function moveStep(stepId: string, position: number) {
     if (!activeRecipe) return;
     try {
-      const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/actions/${actionId}/move`, {
+      const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/steps/${stepId}/move`, {
         method: "POST",
         body: JSON.stringify({ position }),
       });
       applyRecipe(recipe);
-      setSelectedActionId(actionId);
+      setSelectedStepId(stepId);
     } catch (error) {
       setOutput((error as Error).message);
     }
   }
 
-  async function removeAction(actionId: string) {
+  async function removeStep(stepId: string) {
     if (!activeRecipe) return;
     try {
-      const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/actions/${actionId}`, {
+      const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/steps/${stepId}`, {
         method: "DELETE",
       });
       applyRecipe(recipe);
-      setSelectedActionId(recipe.actions[0]?.id ?? null);
+      setSelectedStepId(recipe.steps[0]?.id ?? null);
     } catch (error) {
       setOutput((error as Error).message);
     }
@@ -254,7 +271,7 @@ function App() {
         method: "POST",
         body: JSON.stringify(document),
       });
-      setSelectedActionId(recipe.actions[0]?.id ?? null);
+      setSelectedStepId(recipe.steps[0]?.id ?? null);
       await loadRecipes(recipe.id);
     } catch (error) {
       setOutput((error as Error).message);
@@ -326,11 +343,11 @@ function App() {
                       key={recipe.id}
                       onClick={() => {
                         setActiveRecipeId(recipe.id);
-                        setSelectedActionId(recipe.actions[0]?.id ?? null);
+                        setSelectedStepId(recipe.steps[0]?.id ?? null);
                       }}
                     >
                       <span className="d-block fw-semibold text-truncate">{recipe.name}</span>
-                      <span className="badge text-bg-light mt-2">{recipe.actions.length} actions</span>
+                      <span className="badge text-bg-light mt-2">{recipe.steps.length} steps</span>
                     </button>
                   ))
                 ) : (
@@ -347,7 +364,7 @@ function App() {
                   <div>
                     <h2 className="h4 mb-1">{activeRecipe?.name ?? "Select a recipe"}</h2>
                     <span className="text-secondary">
-                      {activeRecipe ? `${activeRecipe.actions.length} ordered actions` : "Create or select a recipe to begin."}
+                      {activeRecipe ? `${activeRecipe.steps.length} ordered steps` : "Create or select a recipe to begin."}
                     </span>
                   </div>
                   <div className="btn-toolbar gap-2">
@@ -384,15 +401,16 @@ function App() {
                   <EditorView
                     activeRecipe={activeRecipe}
                     setupName={setupName}
+                    selectedStep={selectedStep}
                     selectedAction={selectedAction}
-                    selectedActionId={selectedAction?.id ?? null}
+                    selectedStepId={selectedStep?.id ?? null}
                     onSetupNameChange={setSetupName}
                     onRenameRecipe={renameRecipe}
-                    onAddAction={addAction}
-                    onSelectAction={setSelectedActionId}
-                    onMoveAction={moveAction}
-                    onRemoveAction={removeAction}
-                    onUpdateAction={updateAction}
+                    onAddStep={addStep}
+                    onSelectStep={setSelectedStepId}
+                    onMoveStep={moveStep}
+                    onRemoveStep={removeStep}
+                    onUpdateAction={updateSelectedStepAction}
                   />
                 ) : null}
 
@@ -411,31 +429,33 @@ function App() {
 function EditorView({
   activeRecipe,
   setupName,
+  selectedStep,
   selectedAction,
-  selectedActionId,
+  selectedStepId,
   onSetupNameChange,
   onRenameRecipe,
-  onAddAction,
-  onSelectAction,
-  onMoveAction,
-  onRemoveAction,
+  onAddStep,
+  onSelectStep,
+  onMoveStep,
+  onRemoveStep,
   onUpdateAction,
 }: {
   activeRecipe: Recipe | null;
   setupName: string;
+  selectedStep: RecipeStep | null;
   selectedAction: RecipeAction | null;
-  selectedActionId: string | null;
+  selectedStepId: string | null;
   onSetupNameChange: (name: string) => void;
   onRenameRecipe: (event: FormEvent) => void;
-  onAddAction: (type: RecipeAction["type"]) => void;
-  onSelectAction: (actionId: string) => void;
-  onMoveAction: (actionId: string, position: number) => void;
-  onRemoveAction: (actionId: string) => void;
+  onAddStep: (type: RecipeAction["type"]) => void;
+  onSelectStep: (stepId: string) => void;
+  onMoveStep: (stepId: string, position: number) => void;
+  onRemoveStep: (stepId: string) => void;
   onUpdateAction: (action: RecipeAction) => void;
 }) {
   return (
     <div className="vstack gap-4">
-      <WorkflowGuide activeRecipe={activeRecipe} selectedAction={selectedAction} />
+      <WorkflowGuide activeRecipe={activeRecipe} selectedStep={selectedStep} />
 
       <div className="row g-4 align-items-start">
         <section className="col-12 col-xxl-4">
@@ -485,34 +505,34 @@ function EditorView({
 
         <section className="col-12 col-xxl-4">
           <div className={`card h-100 border-primary-subtle state-card ${activeRecipe ? "state-card-current" : "state-card-disabled"}`}>
-            <SectionHeading number="2" title="Action List" badge={activeRecipe ? "Add or reorder" : "Select recipe"} />
+            <SectionHeading number="2" title="Step List" badge={activeRecipe ? "Add or reorder" : "Select recipe"} />
             <div className="card-body">
-              <div className="btn-group w-100 mb-3" role="group" aria-label="Add action">
-                <button className="btn btn-outline-primary" disabled={!activeRecipe} onClick={() => onAddAction("take_image")}>
+              <div className="btn-group w-100 mb-3" role="group" aria-label="Add step">
+                <button className="btn btn-outline-primary" disabled={!activeRecipe} onClick={() => onAddStep("take_image")}>
                   Take Image
                 </button>
-                <button className="btn btn-outline-primary" disabled={!activeRecipe} onClick={() => onAddAction("unscrewing")}>
+                <button className="btn btn-outline-primary" disabled={!activeRecipe} onClick={() => onAddStep("unscrewing")}>
                   Unscrewing
                 </button>
               </div>
               <div className="list-group action-list">
                 {activeRecipe ? (
-                  activeRecipe.actions.length > 0 ? (
-                    activeRecipe.actions.map((action, index) => (
-                      <ActionRow
-                        key={action.id}
+                  activeRecipe.steps.length > 0 ? (
+                    activeRecipe.steps.map((step, index) => (
+                      <StepRow
+                        key={step.id}
                         index={index}
-                        action={action}
-                        selected={action.id === selectedActionId}
+                        step={step}
+                        selected={step.id === selectedStepId}
                         isFirst={index === 0}
-                        isLast={index === activeRecipe.actions.length - 1}
-                        onSelect={onSelectAction}
-                        onMove={onMoveAction}
-                        onRemove={onRemoveAction}
+                        isLast={index === activeRecipe.steps.length - 1}
+                        onSelect={onSelectStep}
+                        onMove={onMoveStep}
+                        onRemove={onRemoveStep}
                       />
                     ))
                   ) : (
-                    <EmptyState label="No actions yet." />
+                    <EmptyState label="No steps yet." />
                   )
                 ) : (
                   <EmptyState label="No recipe selected." />
@@ -523,10 +543,10 @@ function EditorView({
         </section>
 
         <section className="col-12 col-xxl-4">
-          <div className={`card h-100 border-primary-subtle state-card ${selectedAction ? "state-card-current" : "state-card-disabled"}`}>
-            <SectionHeading number="3" title="Action Configuration" badge={selectedAction ? actionLabel(selectedAction) : "Select action"} />
+          <div className={`card h-100 border-primary-subtle state-card ${selectedStep ? "state-card-current" : "state-card-disabled"}`}>
+            <SectionHeading number="3" title="Step Configuration" badge={selectedAction ? actionLabel(selectedAction) : "Select step"} />
             <div className="card-body">
-              {selectedAction ? <ActionConfiguration action={selectedAction} onUpdate={onUpdateAction} /> : <EmptyState label="Add or select an action to configure it." />}
+              {selectedAction ? <ActionConfiguration action={selectedAction} onUpdate={onUpdateAction} /> : <EmptyState label="Add or select a step to configure it." />}
             </div>
           </div>
         </section>
@@ -535,12 +555,12 @@ function EditorView({
   );
 }
 
-function WorkflowGuide({ activeRecipe, selectedAction }: { activeRecipe: Recipe | null; selectedAction: RecipeAction | null }) {
-  const currentLabel = !activeRecipe ? "Setup" : activeRecipe.actions.length === 0 ? "Actions" : selectedAction ? "Configure" : "Actions";
+function WorkflowGuide({ activeRecipe, selectedStep }: { activeRecipe: Recipe | null; selectedStep: RecipeStep | null }) {
+  const currentLabel = !activeRecipe ? "Setup" : activeRecipe.steps.length === 0 ? "Steps" : selectedStep ? "Configure" : "Steps";
   const items = [
     { label: "Setup", done: Boolean(activeRecipe?.name), current: currentLabel === "Setup" },
-    { label: "Actions", done: Boolean(activeRecipe && activeRecipe.actions.length > 0), current: currentLabel === "Actions" },
-    { label: "Configure", done: Boolean(selectedAction), current: currentLabel === "Configure" },
+    { label: "Steps", done: Boolean(activeRecipe && activeRecipe.steps.length > 0), current: currentLabel === "Steps" },
+    { label: "Configure", done: Boolean(selectedStep), current: currentLabel === "Configure" },
   ];
 
   return (
@@ -792,9 +812,9 @@ function CoordinateInput({
   );
 }
 
-function ActionRow({
+function StepRow({
   index,
-  action,
+  step,
   selected,
   isFirst,
   isLast,
@@ -803,30 +823,31 @@ function ActionRow({
   onRemove,
 }: {
   index: number;
-  action: RecipeAction;
+  step: RecipeStep;
   selected: boolean;
   isFirst: boolean;
   isLast: boolean;
-  onSelect: (actionId: string) => void;
-  onMove: (actionId: string, position: number) => void;
-  onRemove: (actionId: string) => void;
+  onSelect: (stepId: string) => void;
+  onMove: (stepId: string, position: number) => void;
+  onRemove: (stepId: string) => void;
 }) {
+  const action = step.actions[0];
   return (
     <div className={`list-group-item ${selected ? "active" : ""}`}>
-      <button className={`btn action-select ${selected ? "text-white" : "text-body"}`} onClick={() => onSelect(action.id)}>
+      <button className={`btn action-select ${selected ? "text-white" : "text-body"}`} onClick={() => onSelect(step.id)}>
         <span className="fw-semibold d-block">
           {index + 1}. {actionLabel(action)}
         </span>
         <span className={`small d-block ${selected ? "text-white-50" : "text-secondary"}`}>{actionSummary(action)}</span>
       </button>
-      <div className="btn-group btn-group-sm mt-2" role="group" aria-label="Action ordering">
-        <button className="btn btn-outline-secondary" disabled={isFirst} onClick={() => onMove(action.id, index - 1)}>
+      <div className="btn-group btn-group-sm mt-2" role="group" aria-label="Step ordering">
+        <button className="btn btn-outline-secondary" disabled={isFirst} onClick={() => onMove(step.id, index - 1)}>
           Up
         </button>
-        <button className="btn btn-outline-secondary" disabled={isLast} onClick={() => onMove(action.id, index + 1)}>
+        <button className="btn btn-outline-secondary" disabled={isLast} onClick={() => onMove(step.id, index + 1)}>
           Down
         </button>
-        <button className="btn btn-outline-danger" onClick={() => onRemove(action.id)}>
+        <button className="btn btn-outline-danger" onClick={() => onRemove(step.id)}>
           Remove
         </button>
       </div>

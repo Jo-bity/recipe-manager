@@ -47,7 +47,7 @@ class SqliteRecipesRepository:
             return self._row_to_recipe(row)
 
     def save_recipe(self, recipe: Recipe) -> Recipe:
-        document = RecipeDocument(name=recipe.name, actions=recipe.actions)
+        document = RecipeDocument(name=recipe.name, steps=recipe.steps)
         with closing(sqlite3.connect(self.db_path)) as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -82,7 +82,7 @@ class SqliteRecipesRepository:
             id=UUID(row["id"]),
             schema_version=document.schema_version,
             name=row["name"],
-            actions=document.actions,
+            steps=document.steps,
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
         )

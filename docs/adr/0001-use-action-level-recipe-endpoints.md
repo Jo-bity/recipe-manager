@@ -1,3 +1,3 @@
-# Use Action-Level Recipe Endpoints
+# Use Step-Level Recipe Endpoints
 
-The API exposes Actions as nested resources under a Recipe instead of only accepting full Recipe replacement. This matches the Robotics Technician workflow: add an action, edit its parameters, move it, remove it, and validate the result. The tradeoff is that the backend must own ordering and recipe-wide validation invariants, but the API better represents the core technician actions and keeps the UI thin.
+The API exposes Steps as nested resources under a Recipe instead of only accepting full Recipe replacement. This matches the Robotics Technician workflow from the case study: add a step, edit its action parameters, move it, remove it, and validate the result. Each Step contains one or more atomic Actions, so the backend must own ordering and recipe-wide validation invariants while keeping robot intent reusable for adapter translation.

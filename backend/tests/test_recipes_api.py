@@ -24,48 +24,57 @@ class RecipesApiTest(unittest.TestCase):
         app.dependency_overrides.clear()
         self.tempdir.cleanup()
 
-    def test_recipe_action_export_and_vendor_preview(self):
+    def test_recipe_step_export_and_vendor_preview(self):
         recipe = self.client.post("/recipes", json={"name": "Battery screw removal"}).json()
         recipe_id = recipe["id"]
 
         take_image = self.client.post(
-            f"/recipes/{recipe_id}/actions",
+            f"/recipes/{recipe_id}/steps",
             json={
-                "type": "take_image",
-                "parameters": {
-                    "include_pointcloud": True,
-                    "image_scope": "section",
-                    "center": {"x": 120, "y": 80},
-                },
+                "actions": [
+                    {
+                        "type": "take_image",
+                        "parameters": {
+                            "include_pointcloud": True,
+                            "image_scope": "section",
+                            "center": {"x": 120, "y": 80},
+                        },
+                    }
+                ],
             },
         ).json()
-        first_action_id = take_image["actions"][0]["id"]
+        first_step_id = take_image["steps"][0]["id"]
 
         recipe = self.client.post(
-            f"/recipes/{recipe_id}/actions",
+            f"/recipes/{recipe_id}/steps",
             json={
-                "type": "unscrewing",
-                "parameters": {
-                    "mode": "specific",
-                    "target": {"x": 120, "y": 80},
-                },
+                "actions": [
+                    {
+                        "type": "unscrewing",
+                        "parameters": {
+                            "mode": "specific",
+                            "target": {"x": 120, "y": 80},
+                        },
+                    }
+                ],
             },
         ).json()
-        second_action_id = recipe["actions"][1]["id"]
+        second_step_id = recipe["steps"][1]["id"]
 
         moved = self.client.post(
-            f"/recipes/{recipe_id}/actions/{second_action_id}/move",
+            f"/recipes/{recipe_id}/steps/{second_step_id}/move",
             json={"position": 0},
         )
         self.assertEqual(moved.status_code, 200)
-        self.assertEqual(moved.json()["actions"][0]["id"], second_action_id)
-        self.assertEqual(moved.json()["actions"][1]["id"], first_action_id)
+        self.assertEqual(moved.json()["steps"][0]["id"], second_step_id)
+        self.assertEqual(moved.json()["steps"][1]["id"], first_step_id)
 
         exported = self.client.get(f"/recipes/{recipe_id}/export")
         self.assertEqual(exported.status_code, 200)
         self.assertEqual(exported.json()["schema_version"], "1.0")
-        self.assertIn("id", exported.json()["actions"][0])
-        self.assertIn("parameters", exported.json()["actions"][0])
+        self.assertIn("id", exported.json()["steps"][0])
+        self.assertIn("actions", exported.json()["steps"][0])
+        self.assertIn("parameters", exported.json()["steps"][0]["actions"][0])
 
         preview = self.client.post(
             f"/recipes/{recipe_id}/robot-commands/preview?vendor=company_a"
@@ -73,18 +82,23 @@ class RecipesApiTest(unittest.TestCase):
         self.assertEqual(preview.status_code, 200)
         self.assertEqual(preview.json()["commands"][0]["operation"], "unscrew")
         self.assertEqual(preview.json()["commands"][1]["operation"], "capture_image")
+        self.assertEqual(preview.json()["commands"][0]["step_sequence"], 1)
 
-    def test_action_validation_is_fail_fast(self):
+    def test_step_action_validation_is_fail_fast(self):
         recipe_id = self.client.post("/recipes", json={"name": "Invalid target"}).json()["id"]
 
         response = self.client.post(
-            f"/recipes/{recipe_id}/actions",
+            f"/recipes/{recipe_id}/steps",
             json={
-                "type": "unscrewing",
-                "parameters": {
-                    "mode": "specific",
-                    "target": {"x": -1, "y": 0},
-                },
+                "actions": [
+                    {
+                        "type": "unscrewing",
+                        "parameters": {
+                            "mode": "specific",
+                            "target": {"x": -1, "y": 0},
+                        },
+                    }
+                ],
             },
         )
 
@@ -97,7 +111,7 @@ class RecipesApiTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 422)
         self.assertEqual(response.json()["detail"]["code"], "invalid_recipe")
-        self.assertEqual(response.json()["detail"]["errors"][0]["path"], "actions")
+        self.assertEqual(response.json()["detail"]["errors"][0]["path"], "steps")
 
     def test_import_recipe_json_creates_editable_recipe(self):
         response = self.client.post(
@@ -105,14 +119,19 @@ class RecipesApiTest(unittest.TestCase):
             json={
                 "schema_version": "1.0",
                 "name": "Imported",
-                "actions": [
+                "steps": [
                     {
-                        "id": "11111111-1111-1111-1111-111111111111",
-                        "type": "take_image",
-                        "parameters": {
-                            "include_pointcloud": False,
-                            "image_scope": "full_battery",
-                        },
+                        "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                        "actions": [
+                            {
+                                "id": "11111111-1111-1111-1111-111111111111",
+                                "type": "take_image",
+                                "parameters": {
+                                    "include_pointcloud": False,
+                                    "image_scope": "full_battery",
+                                },
+                            }
+                        ],
                     }
                 ],
             },
@@ -120,7 +139,7 @@ class RecipesApiTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(
-            response.json()["actions"][0]["id"], "11111111-1111-1111-1111-111111111111"
+            response.json()["steps"][0]["actions"][0]["id"], "11111111-1111-1111-1111-111111111111"
         )
 
     def test_sample_recipe_json_files_are_importable(self):
@@ -133,7 +152,7 @@ class RecipesApiTest(unittest.TestCase):
 
                 self.assertEqual(response.status_code, 201)
                 self.assertEqual(response.json()["name"], document["name"])
-                self.assertEqual(len(response.json()["actions"]), len(document["actions"]))
+                self.assertEqual(len(response.json()["steps"]), len(document["steps"]))
 
     def test_openapi_spec_is_presentable(self):
         schema = self.client.get("/openapi.json").json()
@@ -144,10 +163,10 @@ class RecipesApiTest(unittest.TestCase):
         paths = schema["paths"]
         self.assertEqual(paths["/recipes"]["get"]["operationId"], "listRecipes")
         self.assertEqual(paths["/recipes"]["post"]["summary"], "Create Recipe")
-        self.assertEqual(paths["/recipes/{recipe_id}/actions"]["post"]["operationId"], "addRecipeAction")
+        self.assertEqual(paths["/recipes/{recipe_id}/steps"]["post"]["operationId"], "addRecipeStep")
         self.assertIn(
-            "Action envelope",
-            paths["/recipes/{recipe_id}/actions"]["post"]["description"],
+            "one or more ordered atomic Actions",
+            paths["/recipes/{recipe_id}/steps"]["post"]["description"],
         )
         self.assertEqual(
             paths["/recipes/{recipe_id}/robot-commands/preview"]["post"]["tags"],
@@ -165,7 +184,7 @@ class RecipesApiTest(unittest.TestCase):
             schema["components"]["schemas"]["RecipeDocument"]["properties"]["schema_version"]["description"],
             "Recipe JSON schema version. Used to evolve the portable format safely.",
         )
-        self.assertIn("actions", schema["components"]["schemas"]["RecipeDocument"]["properties"])
+        self.assertIn("steps", schema["components"]["schemas"]["RecipeDocument"]["properties"])
 
 
 if __name__ == "__main__":

@@ -1,13 +1,13 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from app.bc_recipes.domain.recipe import Recipe, RecipeAction, RecipeDocument
+from app.bc_recipes.domain.recipe import Recipe, RecipeAction, RecipeDocument, RecipeStep
 from app.bc_recipes.service.exceptions import (
-    ActionNotFound,
     FieldError,
     InvalidRecipe,
     OrderConflict,
     RecipeNotFound,
+    StepNotFound,
     UnsupportedVendor,
 )
 from app.bc_recipes.service.ports import RecipesRepository
@@ -26,7 +26,7 @@ class RecipesService:
             id=uuid4(),
             schema_version=document.schema_version,
             name=document.name,
-            actions=document.actions,
+            steps=document.steps,
             created_at=now,
             updated_at=now,
         )
@@ -50,93 +50,117 @@ class RecipesService:
         if not self.recipes_repository.delete_recipe(recipe_id):
             raise RecipeNotFound(f"Recipe {recipe_id} was not found.")
 
-    def add_action(self, recipe_id: UUID, action: RecipeAction) -> Recipe:
+    def add_step(self, recipe_id: UUID, step: RecipeStep) -> Recipe:
         recipe = self.get_recipe(recipe_id)
-        action = action.model_copy(update={"id": uuid4()})
+        step = step.model_copy(update={"id": uuid4()})
         updated = recipe.model_copy(
-            update={"actions": [*recipe.actions, action], "updated_at": datetime.now()}
+            update={"steps": [*recipe.steps, step], "updated_at": datetime.now()}
         )
         return self.recipes_repository.save_recipe(updated)
 
-    def update_action(self, recipe_id: UUID, action_id: UUID, action: RecipeAction) -> Recipe:
+    def update_step(self, recipe_id: UUID, step_id: UUID, step: RecipeStep) -> Recipe:
         recipe = self.get_recipe(recipe_id)
-        actions = []
+        steps = []
         found = False
-        for existing in recipe.actions:
-            if existing.id == action_id:
-                actions.append(action.model_copy(update={"id": action_id}))
+        for existing in recipe.steps:
+            if existing.id == step_id:
+                steps.append(step.model_copy(update={"id": step_id}))
                 found = True
             else:
-                actions.append(existing)
+                steps.append(existing)
         if not found:
-            raise ActionNotFound(f"Action {action_id} was not found.")
-        updated = recipe.model_copy(update={"actions": actions, "updated_at": datetime.now()})
+            raise StepNotFound(f"Step {step_id} was not found.")
+        updated = recipe.model_copy(update={"steps": steps, "updated_at": datetime.now()})
         return self.recipes_repository.save_recipe(updated)
 
-    def delete_action(self, recipe_id: UUID, action_id: UUID) -> Recipe:
+    def delete_step(self, recipe_id: UUID, step_id: UUID) -> Recipe:
         recipe = self.get_recipe(recipe_id)
-        actions = [action for action in recipe.actions if action.id != action_id]
-        if len(actions) == len(recipe.actions):
-            raise ActionNotFound(f"Action {action_id} was not found.")
-        updated = recipe.model_copy(update={"actions": actions, "updated_at": datetime.now()})
+        steps = [step for step in recipe.steps if step.id != step_id]
+        if len(steps) == len(recipe.steps):
+            raise StepNotFound(f"Step {step_id} was not found.")
+        updated = recipe.model_copy(update={"steps": steps, "updated_at": datetime.now()})
         return self.recipes_repository.save_recipe(updated)
 
-    def move_action(self, recipe_id: UUID, action_id: UUID, position: int) -> Recipe:
+    def move_step(self, recipe_id: UUID, step_id: UUID, position: int) -> Recipe:
         recipe = self.get_recipe(recipe_id)
-        if position < 0 or position >= len(recipe.actions):
-            raise OrderConflict("The requested action position is outside the recipe.")
+        if position < 0 or position >= len(recipe.steps):
+            raise OrderConflict("The requested step position is outside the recipe.")
 
-        actions = list(recipe.actions)
-        source_index = next((index for index, action in enumerate(actions) if action.id == action_id), None)
+        steps = list(recipe.steps)
+        source_index = next((index for index, step in enumerate(steps) if step.id == step_id), None)
         if source_index is None:
-            raise ActionNotFound(f"Action {action_id} was not found.")
+            raise StepNotFound(f"Step {step_id} was not found.")
 
-        action = actions.pop(source_index)
-        actions.insert(position, action)
-        updated = recipe.model_copy(update={"actions": actions, "updated_at": datetime.now()})
+        step = steps.pop(source_index)
+        steps.insert(position, step)
+        updated = recipe.model_copy(update={"steps": steps, "updated_at": datetime.now()})
         return self.recipes_repository.save_recipe(updated)
 
     def export_recipe(self, recipe_id: UUID) -> RecipeDocument:
         recipe = self.get_recipe(recipe_id)
-        self._ensure_has_actions(recipe)
-        return RecipeDocument(name=recipe.name, actions=recipe.actions)
+        self._ensure_has_steps(recipe)
+        return RecipeDocument(name=recipe.name, steps=recipe.steps)
 
     def preview_robot_commands(self, recipe_id: UUID, vendor: str) -> dict:
         recipe = self.get_recipe(recipe_id)
-        self._ensure_has_actions(recipe)
+        self._ensure_has_steps(recipe)
         normalized_vendor = vendor.lower()
         if normalized_vendor not in {"company_a", "company_b"}:
             raise UnsupportedVendor(f"Vendor {vendor} is not supported.")
 
+        commands = []
+        sequence = 1
+        for step_index, step in enumerate(recipe.steps, start=1):
+            for action_index, action in enumerate(step.actions, start=1):
+                commands.append(
+                    self._to_vendor_command(
+                        normalized_vendor,
+                        sequence,
+                        step_index,
+                        action_index,
+                        action,
+                    )
+                )
+                sequence += 1
+
         return {
             "vendor": normalized_vendor,
             "recipe_id": recipe.id,
-            "commands": [
-                self._to_vendor_command(normalized_vendor, index, action)
-                for index, action in enumerate(recipe.actions, start=1)
-            ],
+            "commands": commands,
         }
 
-    def _ensure_has_actions(self, recipe: Recipe) -> None:
-        if not recipe.actions:
+    def _ensure_has_steps(self, recipe: Recipe) -> None:
+        if not recipe.steps:
             raise InvalidRecipe(
-                "Recipe must contain at least one action.",
-                [FieldError(path="actions", message="Add at least one action before export or preview.")],
+                "Recipe must contain at least one step.",
+                [FieldError(path="steps", message="Add at least one step before export or preview.")],
             )
 
-    def _to_vendor_command(self, vendor: str, sequence: int, action: RecipeAction) -> dict:
+    def _to_vendor_command(
+        self,
+        vendor: str,
+        sequence: int,
+        step_sequence: int,
+        action_sequence: int,
+        action: RecipeAction,
+    ) -> dict:
+        envelope = {
+            "sequence": sequence,
+            "step_sequence": step_sequence,
+            "action_sequence": action_sequence,
+        }
         parameters = action.parameters
         if action.type == "take_image":
             if vendor == "company_a":
                 return {
-                    "sequence": sequence,
+                    **envelope,
                     "operation": "capture_image",
                     "pointcloud": parameters.include_pointcloud,
                     "scope": parameters.image_scope,
                     "center": parameters.center,
                 }
             return {
-                "sequence": sequence,
+                **envelope,
                 "command": "PHOTO_CAPTURE",
                 "include_depth_map": parameters.include_pointcloud,
                 "region": parameters.image_scope,
@@ -145,13 +169,13 @@ class RecipesService:
 
         if vendor == "company_a":
             return {
-                "sequence": sequence,
+                **envelope,
                 "operation": "unscrew",
                 "strategy": parameters.mode,
                 "target": parameters.target,
             }
         return {
-            "sequence": sequence,
+            **envelope,
             "command": "REMOVE_SCREW",
             "mode": parameters.mode,
             "target_coordinates": parameters.target,
