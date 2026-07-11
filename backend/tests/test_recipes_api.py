@@ -31,6 +31,7 @@ class RecipesApiTest(unittest.TestCase):
         take_image = self.client.post(
             f"/recipes/{recipe_id}/steps",
             json={
+                "type": "take_image",
                 "actions": [
                     {
                         "type": "take_image",
@@ -48,6 +49,7 @@ class RecipesApiTest(unittest.TestCase):
         recipe = self.client.post(
             f"/recipes/{recipe_id}/steps",
             json={
+                "type": "unscrewing",
                 "actions": [
                     {
                         "type": "unscrewing",
@@ -73,6 +75,7 @@ class RecipesApiTest(unittest.TestCase):
         self.assertEqual(exported.status_code, 200)
         self.assertEqual(exported.json()["schema_version"], "1.0")
         self.assertIn("id", exported.json()["steps"][0])
+        self.assertEqual(exported.json()["steps"][0]["type"], "unscrewing")
         self.assertIn("actions", exported.json()["steps"][0])
         self.assertIn("parameters", exported.json()["steps"][0]["actions"][0])
 
@@ -90,6 +93,7 @@ class RecipesApiTest(unittest.TestCase):
         response = self.client.post(
             f"/recipes/{recipe_id}/steps",
             json={
+                "type": "unscrewing",
                 "actions": [
                     {
                         "type": "unscrewing",
@@ -114,12 +118,70 @@ class RecipesApiTest(unittest.TestCase):
     def test_step_payload_errors_are_meaningful(self):
         recipe_id = self.client.post("/recipes", json={"name": "Missing actions"}).json()["id"]
 
-        response = self.client.post(f"/recipes/{recipe_id}/steps", json={"actions": []})
+        response = self.client.post(
+            f"/recipes/{recipe_id}/steps",
+            json={"type": "take_image", "actions": []},
+        )
 
         self.assertEqual(response.status_code, 422)
         self.assertEqual(response.json()["detail"]["code"], "invalid_request")
         self.assertEqual(response.json()["detail"]["errors"][0]["path"], "actions")
         self.assertIn("at least 1 item", response.json()["detail"]["errors"][0]["message"])
+
+    def test_step_type_must_match_single_action_type(self):
+        recipe_id = self.client.post("/recipes", json={"name": "Type mismatch"}).json()["id"]
+
+        response = self.client.post(
+            f"/recipes/{recipe_id}/steps",
+            json={
+                "type": "take_image",
+                "actions": [
+                    {
+                        "type": "unscrewing",
+                        "parameters": {
+                            "mode": "automatic",
+                        },
+                    }
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["detail"]["code"], "invalid_request")
+        self.assertIn(
+            "Step type must match",
+            response.json()["detail"]["errors"][0]["message"],
+        )
+
+    def test_mvp_step_rejects_multiple_actions(self):
+        recipe_id = self.client.post("/recipes", json={"name": "Compound step"}).json()["id"]
+
+        response = self.client.post(
+            f"/recipes/{recipe_id}/steps",
+            json={
+                "type": "take_image",
+                "actions": [
+                    {
+                        "type": "take_image",
+                        "parameters": {
+                            "include_pointcloud": False,
+                            "image_scope": "full_battery",
+                        },
+                    },
+                    {
+                        "type": "unscrewing",
+                        "parameters": {
+                            "mode": "automatic",
+                        },
+                    },
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["detail"]["code"], "invalid_request")
+        self.assertEqual(response.json()["detail"]["errors"][0]["path"], "actions")
+        self.assertIn("at most 1 item", response.json()["detail"]["errors"][0]["message"])
 
     def test_empty_recipe_cannot_be_exported(self):
         recipe_id = self.client.post("/recipes", json={"name": "Empty recipe"}).json()["id"]
@@ -139,6 +201,7 @@ class RecipesApiTest(unittest.TestCase):
                 "steps": [
                     {
                         "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                        "type": "take_image",
                         "actions": [
                             {
                                 "id": "11111111-1111-1111-1111-111111111111",
@@ -182,7 +245,7 @@ class RecipesApiTest(unittest.TestCase):
         self.assertEqual(paths["/recipes"]["post"]["summary"], "Create Recipe")
         self.assertEqual(paths["/recipes/{recipe_id}/steps"]["post"]["operationId"], "addRecipeStep")
         self.assertIn(
-            "one or more ordered atomic Actions",
+            "exactly one",
             paths["/recipes/{recipe_id}/steps"]["post"]["description"],
         )
         self.assertEqual(

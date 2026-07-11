@@ -36,10 +36,12 @@ type RecipeActionInput = Omit<TakeImageAction, "id"> | Omit<UnscrewingAction, "i
 
 type RecipeStep = {
   id: string;
+  type: RecipeAction["type"];
   actions: RecipeAction[];
 };
 
 type RecipeStepInput = {
+  type: RecipeAction["type"];
   actions: RecipeActionInput[];
 };
 
@@ -96,7 +98,7 @@ function defaultAction(type: RecipeAction["type"]): RecipeActionInput {
 }
 
 function defaultStep(type: RecipeAction["type"]): RecipeStepInput {
-  return { actions: [defaultAction(type)] };
+  return { type, actions: [defaultAction(type)] };
 }
 
 function recipeFileName(recipeName: string) {

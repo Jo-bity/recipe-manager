@@ -131,6 +131,7 @@ class UnscrewingAction(BaseModel):
 
 
 RecipeAction = Annotated[TakeImageAction | UnscrewingAction, Field(discriminator="type")]
+StepType = Literal["take_image", "unscrewing"]
 
 
 class RecipeStep(BaseModel):
@@ -139,6 +140,7 @@ class RecipeStep(BaseModel):
         json_schema_extra={
             "example": {
                 "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                "type": "take_image",
                 "actions": [
                     {
                         "id": "11111111-1111-1111-1111-111111111111",
@@ -158,10 +160,20 @@ class RecipeStep(BaseModel):
         default_factory=uuid4,
         description="Stable Step identifier. Preserved during import/export when provided.",
     )
+    type: StepType = Field(
+        description="Case-study Step type. Must match the Step's single MVP Action type.",
+    )
     actions: list[RecipeAction] = Field(
         min_length=1,
-        description="Ordered atomic Actions that together execute this Step.",
+        max_length=1,
+        description="Atomic Actions that execute this Step. The MVP supports exactly one Action per Step.",
     )
+
+    @model_validator(mode="after")
+    def validate_mvp_action_shape(self) -> "RecipeStep":
+        if self.actions[0].type != self.type:
+            raise ValueError("Step type must match the Step's Action type.")
+        return self
 
 
 class RecipeDocument(BaseModel):
@@ -174,6 +186,7 @@ class RecipeDocument(BaseModel):
                 "steps": [
                     {
                         "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                        "type": "take_image",
                         "actions": [
                             {
                                 "id": "11111111-1111-1111-1111-111111111111",
@@ -188,6 +201,7 @@ class RecipeDocument(BaseModel):
                     },
                     {
                         "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                        "type": "unscrewing",
                         "actions": [
                             {
                                 "id": "22222222-2222-2222-2222-222222222222",
@@ -215,7 +229,7 @@ class RecipeDocument(BaseModel):
     )
     steps: list[RecipeStep] = Field(
         default_factory=list,
-        description="Ordered Steps. Each Step contains one or more atomic Actions.",
+        description="Ordered Steps. Each Step has a case-study type and exactly one MVP Action.",
     )
 
 

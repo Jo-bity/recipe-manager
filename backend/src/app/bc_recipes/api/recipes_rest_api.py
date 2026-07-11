@@ -171,9 +171,8 @@ async def delete_recipe(
     tags=["recipes"],
     summary="Add Step",
     description=(
-        "Append a Step to a Recipe. Each Step contains one or more ordered atomic Actions; "
-        "the MVP UI creates one Action per Step while preserving the nested model for "
-        "future compound Steps."
+        "Append a Step to a Recipe. Each Step has a case-study `type` and exactly one "
+        "matching atomic Action in the MVP."
     ),
     operation_id="addRecipeStep",
     responses={201: {"description": "Step added; full Recipe returned."}, 404: ERROR_RESPONSES[404], 422: ERROR_RESPONSES[422]},
@@ -182,7 +181,7 @@ async def add_step(
     recipe_id: UUID,
     step: RecipeStep = Body(
         ...,
-        description="Step payload. Put one or more atomic Actions under `actions`.",
+        description="Step payload. Set `type` to `take_image` or `unscrewing` and put the matching atomic Action under `actions`.",
     ),
     service: RecipesService = Depends(get_recipes_service),
 ) -> Recipe:
@@ -264,8 +263,8 @@ async def validate_recipe(
     summary="Export Recipe JSON",
     description=(
         "Return canonical vendor-neutral Recipe JSON for review, storage, or later import. "
-        "The exported Recipe uses ordered `steps`, each containing one or more atomic "
-        "`actions` with `id`, `type`, and `parameters`."
+        "The exported Recipe uses ordered `steps`, each with a case-study `type` and "
+        "one matching atomic Action with `id`, `type`, and `parameters`."
     ),
     operation_id="exportRecipeJson",
     responses={404: ERROR_RESPONSES[404], 422: ERROR_RESPONSES[422]},

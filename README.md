@@ -6,7 +6,7 @@ API-first MVP for creating technician-safe robot recipes, exporting vendor-neutr
 
 1. Create or select a Recipe from the sidebar.
 2. In **Setup**, give the Recipe a clear operational name. Battery layout and process constraint fields are shown as outlook placeholders for future context.
-3. In **Step List**, add the intended robot procedure as ordered Steps, starting with `Take Image` or `Unscrewing`. Each Step contains one or more atomic Actions; the MVP creates one Action per Step.
+3. In **Step List**, add the intended robot procedure as ordered Steps, starting with `Take Image` or `Unscrewing`. Each Step has a case-study type and exactly one matching atomic Action in the MVP.
 4. Select a Step and configure its Action in **Step Configuration** using technician-facing groups:
    - `Take Image`: choose the capture area and whether depth data should be captured as a point cloud.
    - `Unscrewing`: choose automatic target detection or a specific screw position.
@@ -70,7 +70,7 @@ Core:
 
 - Recipe CRUD
 - Step add/update/delete/reorder
-- Strict validation for `take_image` and `unscrewing` Action parameters nested inside Steps
+- Strict validation for `take_image` and `unscrewing` Step types and their nested Action parameters
 - Canonical Recipe JSON import/export
 - Vendor command preview for Company A and Company B
 - Small technician-facing React UI
