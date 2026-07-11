@@ -580,6 +580,8 @@ function EditorView({
     setDraftAction(null);
   }
 
+  const canAddConfiguredStep = Boolean(activeRecipe && draftAction && isActionComplete(draftAction));
+
   return (
     <div className="vstack gap-4">
       <WorkflowGuide activeRecipe={activeRecipe} hasConfigSelection={Boolean(displayedAction)} />
@@ -653,20 +655,20 @@ function EditorView({
         </section>
 
         <section className="col-12 col-xl-6 col-xxl-5">
-          <div className={`card h-100 border-primary-subtle state-card ${activeRecipe ? "state-card-current" : "state-card-disabled"}`}>
+          <div className={`card border-primary-subtle state-card workflow-config-card ${activeRecipe ? "state-card-current" : "state-card-disabled"}`}>
             <SectionHeading
               number="2"
               title="Step Configuration"
               badge={draftAction ? "New step" : selectedAction ? actionLabel(selectedAction) : "Select type"}
             />
-            <div className="card-body vstack gap-3">
-              <StepCatalog
-                activeRecipe={activeRecipe}
-                selectedType={draftAction?.type ?? null}
-                onSelectType={(type) => setDraftAction(defaultAction(type))}
-              />
-              {displayedAction ? (
-                <>
+            <div className="card-body">
+              <div className="workflow-config-scroll vstack gap-3">
+                <StepCatalog
+                  activeRecipe={activeRecipe}
+                  selectedType={draftAction?.type ?? null}
+                  onSelectType={(type) => setDraftAction(defaultAction(type))}
+                />
+                {displayedAction ? (
                   <ActionConfiguration
                     action={displayedAction}
                     onUpdate={(action) => {
@@ -677,15 +679,13 @@ function EditorView({
                       onUpdateAction(action as RecipeAction);
                     }}
                   />
-                  {draftAction ? (
-                    <button className="btn btn-primary w-100" disabled={!activeRecipe} onClick={addConfiguredStep} type="button">
-                      Add configured step
-                    </button>
-                  ) : null}
-                </>
-              ) : (
-                <EmptyState label="Select a step type or an existing step to configure it." />
-              )}
+                ) : (
+                  <EmptyState label="Select a step type or an existing step to configure it." />
+                )}
+              </div>
+              <button className="btn btn-primary w-100 workflow-config-action" disabled={!canAddConfiguredStep} onClick={addConfiguredStep} type="button">
+                Add configured step
+              </button>
             </div>
           </div>
         </section>
@@ -741,7 +741,10 @@ function WorkflowGuide({ activeRecipe, hasConfigSelection }: { activeRecipe: Rec
       <div className="card-body py-3">
         <div className="row g-2">
           {items.map((item, index) => (
-            <div className="col-12 col-md-4" key={item.label}>
+            <div
+              className={`col-12 col-md-4 ${index === 0 ? "col-xxl-3" : ""} ${index === 1 ? "col-xxl-5" : ""} ${index === 2 ? "col-xxl-4" : ""}`}
+              key={item.label}
+            >
               <div className={`workflow-step ${item.done ? "complete" : ""} ${item.current ? "current" : ""}`}>
                 <span className="badge rounded-pill text-bg-primary">{index + 1}</span>
                 <span className="fw-semibold">{item.label}</span>
@@ -1252,6 +1255,19 @@ function actionSummary(action: RecipeAction): string {
   }
   if (action.parameters.mode === "automatic") return "automatic unscrewing";
   return `specific unscrewing at ${formatCoordinate(action.parameters.target)}`;
+}
+
+function isActionComplete(action: EditableRecipeAction): boolean {
+  if (action.type === "take_image") {
+    if (action.parameters.image_scope === "full_battery") return true;
+    return isNonNegativeCoordinate(action.parameters.center);
+  }
+  if (action.parameters.mode === "automatic") return true;
+  return isNonNegativeCoordinate(action.parameters.target);
+}
+
+function isNonNegativeCoordinate(coordinate?: Coordinate): boolean {
+  return Boolean(coordinate && coordinate.x >= 0 && coordinate.y >= 0);
 }
 
 function formatCoordinate(coordinate?: Coordinate): string {
