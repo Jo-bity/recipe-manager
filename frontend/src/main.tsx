@@ -1313,18 +1313,20 @@ function validationFeedbackFromError(error: Error): ValidationFeedback {
     details: [error.message],
   };
   try {
-    const detail = JSON.parse(error.message);
+    const detail: unknown = JSON.parse(error.message);
     if (!detail || typeof detail !== "object") return fallback;
-    const message = typeof detail.message === "string" ? detail.message : "Recipe validation failed.";
-    const errors = Array.isArray(detail.errors) ? detail.errors : [];
+    const errorDetail = detail as { message?: unknown; errors?: unknown };
+    const message = typeof errorDetail.message === "string" ? errorDetail.message : "Recipe validation failed.";
+    const errors = Array.isArray(errorDetail.errors) ? errorDetail.errors : [];
     const details = errors
-      .map((fieldError) => {
+      .map((fieldError: unknown) => {
         if (!fieldError || typeof fieldError !== "object") return null;
-        const path = typeof fieldError.path === "string" ? fieldError.path : "recipe";
-        const fieldMessage = typeof fieldError.message === "string" ? fieldError.message : "Invalid value.";
+        const fieldErrorDetail = fieldError as { path?: unknown; message?: unknown };
+        const path = typeof fieldErrorDetail.path === "string" ? fieldErrorDetail.path : "recipe";
+        const fieldMessage = typeof fieldErrorDetail.message === "string" ? fieldErrorDetail.message : "Invalid value.";
         return `${path}: ${fieldMessage}`;
       })
-      .filter((detail): detail is string => Boolean(detail));
+      .filter((detail: string | null): detail is string => Boolean(detail));
     return {
       status: "error",
       title: message,
