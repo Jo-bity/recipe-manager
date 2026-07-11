@@ -52,6 +52,34 @@ button:disabled,
   filter: grayscale(0.35);
 }
 
+.ui-icon {
+  display: block;
+  fill: none;
+  height: 1rem;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  width: 1rem;
+}
+
+.icon-shell {
+  align-items: center;
+  background: rgba(13, 110, 253, 0.1);
+  border-radius: 999px;
+  color: var(--bs-primary);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 2rem;
+  justify-content: center;
+  width: 2rem;
+}
+
+.active .icon-shell {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
 .workflow-guide .workflow-step {
   align-items: center;
   background: rgba(255, 255, 255, 0.72);
@@ -112,6 +140,20 @@ button:disabled,
   width: 100%;
 }
 
+.step-type-card-header {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.step-type-title {
+  align-items: center;
+  display: flex;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
 .step-type-card:not(:disabled):hover,
 .step-type-card:not(:disabled):focus {
   border-color: rgba(13, 110, 253, 0.65);
@@ -128,11 +170,33 @@ button:disabled,
   border-color: #dee2e6;
 }
 
+.step-type-card-planned .icon-shell {
+  background: #e9ecef;
+  color: var(--bs-secondary-color);
+}
+
 .step-type-description {
   color: var(--bs-secondary-color);
   display: block;
   font-size: 0.88rem;
   margin-top: 0.35rem;
+}
+
+.configuration-legend {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.45rem;
+}
+
+.configuration-legend .ui-icon {
+  color: var(--bs-primary);
+}
+
+.step-row-title {
+  align-items: center;
+  display: flex;
+  gap: 0.65rem;
+  margin-bottom: 0.2rem;
 }
 
 .segmented-control .btn {

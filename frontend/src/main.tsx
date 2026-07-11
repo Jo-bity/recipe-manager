@@ -61,8 +61,10 @@ type RecipeDocument = {
 };
 
 type WorkspaceView = "editor" | "preview" | "json";
+type IconName = "camera" | "wrench" | "scan" | "gripper" | "check" | "crop" | "layers" | "target";
 type StepCatalogItem = {
   type?: RecipeAction["type"];
+  icon: IconName;
   label: string;
   group: string;
   description: string;
@@ -75,6 +77,7 @@ const API_DOCS_URL = `${API_BASE_URL || "http://localhost:8000"}/docs`;
 const STEP_CATALOG: StepCatalogItem[] = [
   {
     type: "take_image",
+    icon: "camera",
     label: "Take image",
     group: "Inspection",
     description: "Capture the full battery or a focused section before or after work.",
@@ -82,24 +85,28 @@ const STEP_CATALOG: StepCatalogItem[] = [
   },
   {
     type: "unscrewing",
+    icon: "wrench",
     label: "Unscrewing",
     group: "Fastener removal",
     description: "Remove screws automatically or at a specific coordinate.",
     status: "available",
   },
   {
+    icon: "scan",
     label: "Detect screws",
     group: "Inspection",
     description: "Locate screw candidates from an image before removal.",
     status: "planned",
   },
   {
+    icon: "gripper",
     label: "Pick component",
     group: "Handling",
     description: "Pick a loosened battery component from a known position.",
     status: "planned",
   },
   {
+    icon: "check",
     label: "Verify removal",
     group: "Inspection",
     description: "Capture proof that the target screw or component was removed.",
@@ -149,6 +156,68 @@ function recipeFileName(recipeName: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
   return `${slug || "recipe"}.json`;
+}
+
+function actionIcon(action: RecipeAction): IconName {
+  return action.type === "take_image" ? "camera" : "wrench";
+}
+
+function Icon({ name }: { name: IconName }) {
+  return (
+    <svg className="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      {name === "camera" ? (
+        <>
+          <path d="M4 8.5h3l1.4-2h7.2l1.4 2h3v9.5H4z" />
+          <circle cx="12" cy="13" r="3.2" />
+        </>
+      ) : null}
+      {name === "wrench" ? (
+        <path d="M15.6 5.2a4.2 4.2 0 0 0 3.2 5.1l-8.5 8.5a2.4 2.4 0 0 1-3.4-3.4l8.5-8.5a4.2 4.2 0 0 0 .2-1.7z" />
+      ) : null}
+      {name === "scan" ? (
+        <>
+          <path d="M5 8V5h3" />
+          <path d="M16 5h3v3" />
+          <path d="M19 16v3h-3" />
+          <path d="M8 19H5v-3" />
+          <path d="M8 12h8" />
+        </>
+      ) : null}
+      {name === "gripper" ? (
+        <>
+          <path d="M8 4v7" />
+          <path d="M16 4v7" />
+          <path d="M8 11l-3 5 3 4" />
+          <path d="M16 11l3 5-3 4" />
+          <path d="M10 14h4" />
+        </>
+      ) : null}
+      {name === "check" ? <path d="M5 12.5l4.2 4.2L19 7" /> : null}
+      {name === "crop" ? (
+        <>
+          <path d="M7 3v14h14" />
+          <path d="M3 7h14v14" />
+        </>
+      ) : null}
+      {name === "layers" ? (
+        <>
+          <path d="M12 4l8 4-8 4-8-4z" />
+          <path d="M4 12l8 4 8-4" />
+          <path d="M4 16l8 4 8-4" />
+        </>
+      ) : null}
+      {name === "target" ? (
+        <>
+          <circle cx="12" cy="12" r="7" />
+          <circle cx="12" cy="12" r="2.5" />
+          <path d="M12 3v3" />
+          <path d="M12 18v3" />
+          <path d="M3 12h3" />
+          <path d="M18 12h3" />
+        </>
+      ) : null}
+    </svg>
+  );
 }
 
 function App() {
@@ -751,8 +820,13 @@ function StepCatalog({
             onClick={() => item.type && onAddStep(item.type)}
             type="button"
           >
-            <span className="d-flex justify-content-between align-items-center gap-2">
-              <span className="fw-semibold">{item.label}</span>
+            <span className="step-type-card-header">
+              <span className="step-type-title">
+                <span className="icon-shell">
+                  <Icon name={item.icon} />
+                </span>
+                <span className="fw-semibold">{item.label}</span>
+              </span>
               <span className={`badge ${item.status === "available" ? "text-bg-primary" : "text-bg-secondary"}`}>
                 {item.status === "available" ? item.group : "Outlook"}
               </span>
@@ -771,7 +845,10 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
     return (
       <div className="vstack gap-3">
         <fieldset className="border rounded p-3">
-          <legend className="float-none w-auto px-2 fs-6 fw-semibold">Capture area</legend>
+          <legend className="configuration-legend float-none w-auto px-2 fs-6 fw-semibold">
+            <Icon name="crop" />
+            Capture area
+          </legend>
           <SegmentedControl
             value={parameters.image_scope}
             options={[
@@ -810,7 +887,10 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
         </fieldset>
 
         <fieldset className="border rounded p-3">
-          <legend className="float-none w-auto px-2 fs-6 fw-semibold">Depth data</legend>
+          <legend className="configuration-legend float-none w-auto px-2 fs-6 fw-semibold">
+            <Icon name="layers" />
+            Depth data
+          </legend>
           <SegmentedControl
             value={parameters.include_pointcloud ? "pointcloud" : "image_only"}
             options={[
@@ -828,7 +908,10 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
   return (
     <div className="vstack gap-3">
       <fieldset className="border rounded p-3">
-        <legend className="float-none w-auto px-2 fs-6 fw-semibold">Targeting</legend>
+        <legend className="configuration-legend float-none w-auto px-2 fs-6 fw-semibold">
+          <Icon name="target" />
+          Targeting
+        </legend>
         <SegmentedControl
           value={parameters.mode}
           options={[
@@ -934,8 +1017,13 @@ function StepRow({
   return (
     <div className={`list-group-item ${selected ? "active" : ""}`}>
       <button className={`btn action-select ${selected ? "text-white" : "text-body"}`} onClick={() => onSelect(step.id)}>
-        <span className="fw-semibold d-block">
-          {index + 1}. {actionLabel(action)}
+        <span className="step-row-title">
+          <span className="icon-shell">
+            <Icon name={actionIcon(action)} />
+          </span>
+          <span className="fw-semibold">
+            {index + 1}. {actionLabel(action)}
+          </span>
         </span>
         <span className={`small d-block ${selected ? "text-white-50" : "text-secondary"}`}>{actionSummary(action)}</span>
       </button>
