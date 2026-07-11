@@ -69,19 +69,15 @@ The level of operational readiness needed before Recipes can safely influence re
 _Avoid_: Polish, completeness, production-ready
 
 **Recipe Editor**:
-The technician-facing view for adapting Recipe intent: naming Recipes, adding and ordering Steps, configuring the selected Step's Action parameters, validating structure, and importing or exporting Recipe JSON.
+The technician-facing view for adapting Recipe intent: naming Recipes, drafting and adding configured Steps, ordering Steps, configuring existing Step Action parameters, validating structure, and importing or exporting Recipe JSON.
 _Avoid_: Admin UI, robot debugger, execution console
 
 **Setup**:
 The Recipe Editor area for defining the Recipe's operational purpose before adding Steps, such as the Recipe name and future Battery Layout or Process Constraint context.
 _Avoid_: Metadata form, project settings, robot setup
 
-**Add Step**:
-The Recipe Editor area where a Robotics Technician selects a Step type and explicitly clicks Add Step. Step-type selection alone does not mutate the Recipe. Take Image point cloud output is configured here because it describes image input/output creation.
-_Avoid_: Inline action form, hidden auto-add behavior
-
 **Step Configuration**:
-The Recipe Editor area for explaining and editing the parameters of the currently selected Step's Action in technician language. Take Image configuration distinguishes full-battery image capture from battery section image capture. Unscrewing configuration distinguishes automatic unscrewing from specific unscrewing. XY coordinates can be edited with number inputs or by selecting the preview image when a section or specific target is active.
+The Recipe Editor area for selecting a Step type, configuring a draft Step before adding it, and editing an existing Step's Action parameters in technician language. Step-type selection alone does not mutate the Recipe; the draft enters the Step List only after Add configured step. Take Image configuration distinguishes full-battery image capture from battery section image capture and includes image output. Unscrewing configuration distinguishes automatic unscrewing from specific unscrewing. XY coordinates can be edited with number inputs or by selecting the preview image when a section or specific target is active.
 _Avoid_: Raw JSON editor, inline add form, robot command form
 
 **Adapter Preview**:

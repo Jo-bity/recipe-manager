@@ -33,6 +33,9 @@ type UnscrewingAction = {
 
 type RecipeAction = TakeImageAction | UnscrewingAction;
 type RecipeActionInput = Omit<TakeImageAction, "id"> | Omit<UnscrewingAction, "id">;
+type EditableRecipeAction =
+  | (Omit<TakeImageAction, "id"> & { id?: string })
+  | (Omit<UnscrewingAction, "id"> & { id?: string });
 
 type RecipeStep = {
   id: string;
@@ -145,8 +148,8 @@ function defaultAction(type: RecipeAction["type"], includePointcloud = false): R
   };
 }
 
-function defaultStep(type: RecipeAction["type"], includePointcloud = false): RecipeStepInput {
-  return { type, actions: [defaultAction(type, includePointcloud)] };
+function stepInputFromAction(action: RecipeActionInput): RecipeStepInput {
+  return { type: action.type, actions: [action] };
 }
 
 function recipeFileName(recipeName: string) {
@@ -313,12 +316,12 @@ function App() {
     }
   }
 
-  async function addStep(type: RecipeAction["type"], includePointcloud = false) {
+  async function addStep(action: RecipeActionInput) {
     if (!activeRecipe) return;
     try {
       const recipe = await api<Recipe>(`/recipes/${activeRecipe.id}/steps`, {
         method: "POST",
-        body: JSON.stringify(defaultStep(type, includePointcloud)),
+        body: JSON.stringify(stepInputFromAction(action)),
       });
       const addedStep = recipe.steps[recipe.steps.length - 1];
       applyRecipe(recipe);
@@ -498,7 +501,6 @@ function App() {
                     activeRecipe={activeRecipe}
                     recipeName={recipeName}
                     setupName={setupName}
-                    selectedStep={selectedStep}
                     selectedAction={selectedAction}
                     selectedStepId={selectedStep?.id ?? null}
                     onRecipeNameChange={setRecipeName}
@@ -537,7 +539,6 @@ function EditorView({
   activeRecipe,
   recipeName,
   setupName,
-  selectedStep,
   selectedAction,
   selectedStepId,
   onRecipeNameChange,
@@ -553,22 +554,35 @@ function EditorView({
   activeRecipe: Recipe | null;
   recipeName: string;
   setupName: string;
-  selectedStep: RecipeStep | null;
   selectedAction: RecipeAction | null;
   selectedStepId: string | null;
   onRecipeNameChange: (name: string) => void;
   onCreateRecipe: (event: FormEvent) => void;
   onSetupNameChange: (name: string) => void;
   onRenameRecipe: (event: FormEvent) => void;
-  onAddStep: (type: RecipeAction["type"], includePointcloud?: boolean) => void;
+  onAddStep: (action: RecipeActionInput) => Promise<void>;
   onSelectStep: (stepId: string) => void;
   onMoveStep: (stepId: string, position: number) => void;
   onRemoveStep: (stepId: string) => void;
   onUpdateAction: (action: RecipeAction) => void;
 }) {
+  const [draftAction, setDraftAction] = useState<RecipeActionInput | null>(null);
+  const displayedAction = draftAction ?? selectedAction;
+  const isDrafting = Boolean(draftAction);
+
+  useEffect(() => {
+    setDraftAction(null);
+  }, [activeRecipe?.id]);
+
+  async function addConfiguredStep() {
+    if (!draftAction) return;
+    await onAddStep(draftAction);
+    setDraftAction(null);
+  }
+
   return (
     <div className="vstack gap-4">
-      <WorkflowGuide activeRecipe={activeRecipe} selectedStep={selectedStep} />
+      <WorkflowGuide activeRecipe={activeRecipe} hasConfigSelection={Boolean(displayedAction)} />
 
       <div className="row g-4 align-items-start">
         <section className="col-12 col-xl-6 col-xxl-3">
@@ -638,27 +652,47 @@ function EditorView({
           </div>
         </section>
 
-        <section className="col-12 col-xl-6 col-xxl-3">
+        <section className="col-12 col-xl-6 col-xxl-5">
           <div className={`card h-100 border-primary-subtle state-card ${activeRecipe ? "state-card-current" : "state-card-disabled"}`}>
-            <SectionHeading number="2" title="Add Step" badge={activeRecipe ? "Step type" : "Create recipe"} />
-            <div className="card-body">
-              <StepCatalog activeRecipe={activeRecipe} onAddStep={onAddStep} />
+            <SectionHeading
+              number="2"
+              title="Step Configuration"
+              badge={draftAction ? "New step" : selectedAction ? actionLabel(selectedAction) : "Select type"}
+            />
+            <div className="card-body vstack gap-3">
+              <StepCatalog
+                activeRecipe={activeRecipe}
+                selectedType={draftAction?.type ?? null}
+                onSelectType={(type) => setDraftAction(defaultAction(type))}
+              />
+              {displayedAction ? (
+                <>
+                  <ActionConfiguration
+                    action={displayedAction}
+                    onUpdate={(action) => {
+                      if (isDrafting) {
+                        setDraftAction(action as RecipeActionInput);
+                        return;
+                      }
+                      onUpdateAction(action as RecipeAction);
+                    }}
+                  />
+                  {draftAction ? (
+                    <button className="btn btn-primary w-100" disabled={!activeRecipe} onClick={addConfiguredStep} type="button">
+                      Add configured step
+                    </button>
+                  ) : null}
+                </>
+              ) : (
+                <EmptyState label="Select a step type or an existing step to configure it." />
+              )}
             </div>
           </div>
         </section>
 
-        <section className="col-12 col-xl-6 col-xxl-3">
-          <div className={`card h-100 border-primary-subtle state-card ${selectedStep ? "state-card-current" : "state-card-disabled"}`}>
-            <SectionHeading number="3" title="Step Configuration" badge={selectedAction ? actionLabel(selectedAction) : "Select step"} />
-            <div className="card-body">
-              {selectedAction ? <ActionConfiguration action={selectedAction} onUpdate={onUpdateAction} /> : <EmptyState label="Add or select a step to configure it." />}
-            </div>
-          </div>
-        </section>
-
-        <section className="col-12 col-xl-6 col-xxl-3">
+        <section className="col-12 col-xl-6 col-xxl-4">
           <div className={`card h-100 border-primary-subtle state-card ${activeRecipe ? "state-card-current" : "state-card-disabled"}`}>
-            <SectionHeading number="4" title="Step List" badge={activeRecipe ? "Recipe order" : "Create recipe"} />
+            <SectionHeading number="3" title="Step List" badge={activeRecipe ? "Recipe order" : "Create recipe"} />
             <div className="card-body">
               <div className="list-group action-list">
                 {activeRecipe ? (
@@ -668,10 +702,13 @@ function EditorView({
                         key={step.id}
                         index={index}
                         step={step}
-                        selected={step.id === selectedStepId}
+                        selected={!isDrafting && step.id === selectedStepId}
                         isFirst={index === 0}
                         isLast={index === activeRecipe.steps.length - 1}
-                        onSelect={onSelectStep}
+                        onSelect={(stepId) => {
+                          setDraftAction(null);
+                          onSelectStep(stepId);
+                        }}
                         onMove={onMoveStep}
                         onRemove={onRemoveStep}
                       />
@@ -691,12 +728,11 @@ function EditorView({
   );
 }
 
-function WorkflowGuide({ activeRecipe, selectedStep }: { activeRecipe: Recipe | null; selectedStep: RecipeStep | null }) {
-  const currentLabel = !activeRecipe ? "Setup" : activeRecipe.steps.length === 0 ? "Add" : selectedStep ? "Configure" : "List";
+function WorkflowGuide({ activeRecipe, hasConfigSelection }: { activeRecipe: Recipe | null; hasConfigSelection: boolean }) {
+  const currentLabel = !activeRecipe ? "Setup" : hasConfigSelection ? "Configure" : "List";
   const items = [
     { label: "Setup", done: Boolean(activeRecipe?.name), current: currentLabel === "Setup" },
-    { label: "Add", done: Boolean(activeRecipe && activeRecipe.steps.length > 0), current: currentLabel === "Add" },
-    { label: "Configure", done: Boolean(selectedStep), current: currentLabel === "Configure" },
+    { label: "Configure", done: Boolean(hasConfigSelection), current: currentLabel === "Configure" },
     { label: "List", done: Boolean(activeRecipe && activeRecipe.steps.length > 0), current: currentLabel === "List" },
   ];
 
@@ -705,7 +741,7 @@ function WorkflowGuide({ activeRecipe, selectedStep }: { activeRecipe: Recipe | 
       <div className="card-body py-3">
         <div className="row g-2">
           {items.map((item, index) => (
-            <div className="col-12 col-md-3" key={item.label}>
+            <div className="col-12 col-md-4" key={item.label}>
               <div className={`workflow-step ${item.done ? "complete" : ""} ${item.current ? "current" : ""}`}>
                 <span className="badge rounded-pill text-bg-primary">{index + 1}</span>
                 <span className="fw-semibold">{item.label}</span>
@@ -812,20 +848,24 @@ function EmptyState({ label }: { label: string }) {
 
 function StepCatalog({
   activeRecipe,
-  onAddStep,
+  selectedType,
+  onSelectType,
 }: {
   activeRecipe: Recipe | null;
-  onAddStep: (type: RecipeAction["type"], includePointcloud?: boolean) => void;
+  selectedType: RecipeAction["type"] | null;
+  onSelectType: (type: RecipeAction["type"]) => void;
 }) {
-  const [selectedType, setSelectedType] = useState<RecipeAction["type"]>("take_image");
-  const [includePointcloud, setIncludePointcloud] = useState(false);
-  const selectedItem = STEP_CATALOG.find((item) => item.type === selectedType && item.status === "available");
-  const canAddSelectedStep = Boolean(activeRecipe && selectedItem?.type);
+  const availableItems = STEP_CATALOG.filter((item) => item.status === "available" && item.type);
+  const plannedItems = STEP_CATALOG.filter((item) => item.status === "planned");
 
   return (
-    <div className="vstack gap-3">
+    <fieldset className="border rounded p-3">
+      <legend className="configuration-legend float-none w-auto px-2 fs-6 fw-semibold">
+        <Icon name="check" />
+        New step type
+      </legend>
       <div className="step-catalog">
-        {STEP_CATALOG.map((item) => {
+        {availableItems.map((item) => {
           const selectable = Boolean(activeRecipe && item.status === "available" && item.type);
           const selected = item.type === selectedType && item.status === "available";
           return (
@@ -834,7 +874,7 @@ function StepCatalog({
               className={`step-type-card ${selected ? "step-type-card-selected" : ""} ${item.status === "planned" ? "step-type-card-planned" : ""}`}
               disabled={!selectable}
               key={item.label}
-              onClick={() => item.type && setSelectedType(item.type)}
+              onClick={() => item.type && onSelectType(item.type)}
               type="button"
             >
               <span className="step-type-card-header">
@@ -848,43 +888,26 @@ function StepCatalog({
                   {item.status === "available" ? item.group : "Outlook"}
                 </span>
               </span>
-              <span className="step-type-description">{item.description}</span>
               <span className="step-type-action">
-                {item.status === "available" ? (selected ? "Selected" : "Select type") : "Planned"}
+                {item.status === "available" ? (selected ? "Configuring" : "Configure type") : "Planned"}
               </span>
             </button>
           );
         })}
       </div>
-      {selectedType === "take_image" ? (
-        <fieldset className="border rounded p-3">
-          <legend className="configuration-legend float-none w-auto px-2 fs-6 fw-semibold">
-            <Icon name="layers" />
-            Image output
-          </legend>
-          <SegmentedControl
-            value={includePointcloud ? "pointcloud" : "image_only"}
-            options={[
-              { value: "image_only", label: "2D image only" },
-              { value: "pointcloud", label: "Image + point cloud" },
-            ]}
-            onChange={(mode) => setIncludePointcloud(mode === "pointcloud")}
-          />
-        </fieldset>
-      ) : null}
-      <button
-        className="btn btn-primary w-100"
-        disabled={!canAddSelectedStep}
-        onClick={() => selectedItem?.type && onAddStep(selectedItem.type, includePointcloud)}
-        type="button"
-      >
-        Add Step
-      </button>
-    </div>
+      <div className="planned-step-strip mt-3">
+        <span className="text-secondary small fw-semibold">Outlook:</span>
+        {plannedItems.map((item) => (
+          <span className="badge rounded-pill text-bg-secondary" key={item.label}>
+            {item.label}
+          </span>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
-function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpdate: (action: RecipeAction) => void }) {
+function ActionConfiguration({ action, onUpdate }: { action: EditableRecipeAction; onUpdate: (action: EditableRecipeAction) => void }) {
   if (action.type === "take_image") {
     const parameters = action.parameters;
     return (
@@ -937,6 +960,20 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
               </div>
             </div>
           ) : null}
+        </fieldset>
+        <fieldset className="border rounded p-3">
+          <legend className="configuration-legend float-none w-auto px-2 fs-6 fw-semibold">
+            <Icon name="layers" />
+            Image output
+          </legend>
+          <SegmentedControl
+            value={parameters.include_pointcloud ? "pointcloud" : "image_only"}
+            options={[
+              { value: "image_only", label: "2D image only" },
+              { value: "pointcloud", label: "Image + point cloud" },
+            ]}
+            onChange={(mode) => onUpdate({ ...action, parameters: { ...parameters, include_pointcloud: mode === "pointcloud" } })}
+          />
         </fieldset>
         <StepConfigurationOutlook type={action.type} />
       </div>

@@ -127,6 +127,7 @@ button:disabled,
 .step-catalog {
   display: grid;
   gap: 0.6rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .step-type-card {
@@ -134,7 +135,8 @@ button:disabled,
   border: 1px solid rgba(13, 110, 253, 0.28);
   border-radius: var(--bs-border-radius);
   color: var(--bs-body-color);
-  padding: 0.85rem;
+  min-height: 5.7rem;
+  padding: 0.7rem;
   text-align: left;
   transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
   width: 100%;
@@ -197,11 +199,18 @@ button:disabled,
   display: block;
   font-size: 0.88rem;
   font-weight: 600;
-  margin-top: 0.65rem;
+  margin-top: 0.45rem;
 }
 
 .step-type-card-planned .step-type-action {
   color: var(--bs-secondary-color);
+}
+
+.planned-step-strip {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
 }
 
 .configuration-legend {
@@ -386,5 +395,11 @@ button:disabled,
 @media (min-width: 1400px) {
   .container-fluid {
     max-width: 1520px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .step-catalog {
+    grid-template-columns: 1fr;
   }
 }
