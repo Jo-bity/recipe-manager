@@ -872,6 +872,7 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
     const parameters = action.parameters;
     return (
       <div className="vstack gap-3">
+        <ImageCapturePreview parameters={parameters} />
         <fieldset className="border rounded p-3">
           <legend className="configuration-legend float-none w-auto px-2 fs-6 fw-semibold">
             <Icon name="crop" />
@@ -935,6 +936,7 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
   const parameters = action.parameters;
   return (
     <div className="vstack gap-3">
+      <UnscrewingPreview parameters={parameters} />
       <fieldset className="border rounded p-3">
         <legend className="configuration-legend float-none w-auto px-2 fs-6 fw-semibold">
           <Icon name="target" />
@@ -976,6 +978,75 @@ function ActionConfiguration({ action, onUpdate }: { action: RecipeAction; onUpd
           </div>
         ) : null}
       </fieldset>
+    </div>
+  );
+}
+
+function ImageCapturePreview({ parameters }: { parameters: TakeImageParameters }) {
+  const center = parameters.center ?? { x: 50, y: 50 };
+  const x = clampPercent(center.x);
+  const y = clampPercent(center.y);
+  const sectionStyle = {
+    left: `${x}%`,
+    top: `${y}%`,
+  };
+
+  return (
+    <div className="configuration-preview">
+      <div className={`battery-preview ${parameters.include_pointcloud ? "battery-preview-depth" : ""}`}>
+        <div className="battery-terminal battery-terminal-positive" />
+        <div className="battery-terminal battery-terminal-negative" />
+        <div className="battery-grid">
+          {Array.from({ length: 18 }).map((_, index) => (
+            <span className="battery-cell" key={index} />
+          ))}
+        </div>
+        {parameters.image_scope === "section" ? (
+          <>
+            <div className="capture-section" style={sectionStyle} />
+            <div className="capture-crosshair" style={sectionStyle} />
+          </>
+        ) : (
+          <div className="capture-full-frame" />
+        )}
+        {parameters.include_pointcloud ? <div className="depth-layer" /> : null}
+      </div>
+      <div className="preview-caption">
+        {parameters.image_scope === "section"
+          ? `Section centered at ${formatCoordinate(parameters.center)}`
+          : "Full battery capture"}
+        {parameters.include_pointcloud ? " with depth data" : " as 2D image only"}
+      </div>
+    </div>
+  );
+}
+
+function UnscrewingPreview({ parameters }: { parameters: UnscrewingParameters }) {
+  const target = parameters.target ?? { x: 50, y: 50 };
+  const targetStyle = {
+    left: `${clampPercent(target.x)}%`,
+    top: `${clampPercent(target.y)}%`,
+  };
+
+  return (
+    <div className="configuration-preview">
+      <div className="battery-preview">
+        <div className="battery-grid">
+          {Array.from({ length: 18 }).map((_, index) => (
+            <span className="battery-cell screw-cell" key={index} />
+          ))}
+        </div>
+        {parameters.mode === "specific" ? (
+          <div className="target-marker" style={targetStyle} />
+        ) : (
+          <div className="auto-detect-sweep" />
+        )}
+      </div>
+      <div className="preview-caption">
+        {parameters.mode === "specific"
+          ? `Specific screw target at ${formatCoordinate(parameters.target)}`
+          : "Automatic target detection across visible screws"}
+      </div>
     </div>
   );
 }
@@ -1086,6 +1157,10 @@ function actionSummary(action: RecipeAction): string {
 function formatCoordinate(coordinate?: Coordinate): string {
   if (!coordinate) return "x=0, y=0";
   return `x=${coordinate.x}, y=${coordinate.y}`;
+}
+
+function clampPercent(value: number): number {
+  return Math.max(8, Math.min(92, value));
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

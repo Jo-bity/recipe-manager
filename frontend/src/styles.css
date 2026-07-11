@@ -221,6 +221,138 @@ button:disabled,
   margin-bottom: 0.2rem;
 }
 
+.configuration-preview {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.battery-preview {
+  aspect-ratio: 4 / 3;
+  background:
+    linear-gradient(135deg, rgba(13, 110, 253, 0.08), rgba(25, 135, 84, 0.08)),
+    #f8fafc;
+  border: 1px solid #cfd8e3;
+  border-radius: var(--bs-border-radius);
+  overflow: hidden;
+  position: relative;
+}
+
+.battery-preview-depth {
+  background:
+    linear-gradient(135deg, rgba(13, 110, 253, 0.12), rgba(32, 201, 151, 0.18)),
+    #f8fafc;
+}
+
+.battery-grid {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(6, 1fr);
+  inset: 2rem 1rem 1rem;
+  position: absolute;
+}
+
+.battery-cell {
+  background: #fff;
+  border: 1px solid #ccd6e0;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 0.2rem rgba(13, 110, 253, 0.05);
+}
+
+.screw-cell {
+  position: relative;
+}
+
+.screw-cell::after {
+  background: #6c757d;
+  border-radius: 999px;
+  content: "";
+  height: 0.35rem;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 0.35rem;
+}
+
+.battery-terminal {
+  background: #adb5bd;
+  border-radius: 0 0 var(--bs-border-radius-sm) var(--bs-border-radius-sm);
+  height: 0.75rem;
+  position: absolute;
+  top: 0;
+  width: 2.8rem;
+}
+
+.battery-terminal-positive {
+  left: 1.2rem;
+}
+
+.battery-terminal-negative {
+  right: 1.2rem;
+}
+
+.capture-full-frame {
+  border: 3px solid rgba(13, 110, 253, 0.8);
+  border-radius: var(--bs-border-radius);
+  inset: 0.7rem;
+  position: absolute;
+}
+
+.capture-section {
+  border: 3px solid rgba(13, 110, 253, 0.85);
+  border-radius: var(--bs-border-radius);
+  height: 36%;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 44%;
+  z-index: 2;
+}
+
+.capture-crosshair,
+.target-marker {
+  border-radius: 999px;
+  height: 1.1rem;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 1.1rem;
+  z-index: 3;
+}
+
+.capture-crosshair {
+  background: var(--bs-primary);
+  box-shadow: 0 0 0 0.3rem rgba(13, 110, 253, 0.18);
+}
+
+.target-marker {
+  background: var(--bs-danger);
+  box-shadow: 0 0 0 0.35rem rgba(220, 53, 69, 0.18);
+}
+
+.depth-layer {
+  background-image:
+    linear-gradient(90deg, rgba(32, 201, 151, 0.2) 1px, transparent 1px),
+    linear-gradient(rgba(32, 201, 151, 0.2) 1px, transparent 1px);
+  background-size: 1rem 1rem;
+  inset: 0;
+  position: absolute;
+  z-index: 1;
+}
+
+.auto-detect-sweep {
+  background: linear-gradient(90deg, transparent, rgba(25, 135, 84, 0.26), transparent);
+  height: 100%;
+  left: 18%;
+  position: absolute;
+  top: 0;
+  transform: skewX(-10deg);
+  width: 32%;
+}
+
+.preview-caption {
+  color: var(--bs-secondary-color);
+  font-size: 0.88rem;
+}
+
 .segmented-control .btn {
   min-height: 2.75rem;
 }
