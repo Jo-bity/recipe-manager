@@ -5,19 +5,27 @@ This context describes the recipe-authoring domain for an API-centered MVP that 
 ## Language
 
 **Recipe**:
-A named, ordered set of automation instructions intended for a robotic arm to execute against a battery-related task.
+A named, ordered set of Steps intended for a robotic arm to execute against a battery-related task.
 _Avoid_: Workflow, script, program
 
-**Action**:
-A technician-facing instruction inside a Recipe. The MVP supports Take Image and Unscrewing Actions, each with type-specific properties.
-_Avoid_: Task, command, raw robot call
+**Step**:
+The public, technician-facing unit in a Recipe. A Step has a case-study type such as Take Image or Unscrewing and appears in the ordered Recipe sequence.
+_Avoid_: Raw action, command, vendor call
 
-**Action List**:
-The ordered list of Actions in a Recipe. Its order communicates the intended robot procedure sequence.
-_Avoid_: Script, workflow, command list
+**Step List**:
+The ordered list of Steps in a Recipe. Its order communicates the intended robot procedure sequence and is the place where a Robotics Technician reviews, reorders, or removes Steps.
+_Avoid_: Action list, script, workflow, command list
+
+**Action**:
+An atomic robot-intent element nested inside a Step. The MVP supports Take Image and Unscrewing Actions and enforces exactly one Action per Step with a matching type; future compound Steps may contain multiple Actions.
+_Avoid_: Public recipe unit, task, raw robot call
+
+**Step Type**:
+The case-study operation category of a Step, currently `take_image` or `unscrewing`. In the MVP the Step type must match the nested Action type.
+_Avoid_: UI label only, command name
 
 **Recipe JSON**:
-The canonical, vendor-neutral representation of a Recipe used for download, import, validation, and translation into robot-specific API calls.
+The canonical, vendor-neutral representation of a Recipe used for download, import, validation, and translation into robot-specific API calls. It contains ordered `steps`; each MVP Step contains one matching atomic Action under `actions`.
 _Avoid_: Export file, payload, document
 
 **Robot Command API**:
@@ -61,21 +69,29 @@ The level of operational readiness needed before Recipes can safely influence re
 _Avoid_: Polish, completeness, production-ready
 
 **Recipe Editor**:
-The technician-facing view for adapting Recipe intent: naming Recipes, editing ordered Actions, validating structure, and importing or exporting Recipe JSON.
+The technician-facing view for adapting Recipe intent: naming Recipes, adding and ordering Steps, configuring the selected Step's Action parameters, validating structure, and importing or exporting Recipe JSON.
 _Avoid_: Admin UI, robot debugger, execution console
 
 **Setup**:
-The Recipe Editor area for defining the Recipe's operational purpose before editing Actions, such as the Recipe name and the Battery Layout or Process Constraint it addresses.
+The Recipe Editor area for defining the Recipe's operational purpose before adding Steps, such as the Recipe name and future Battery Layout or Process Constraint context.
 _Avoid_: Metadata form, project settings, robot setup
 
-**Action Configuration**:
-The Recipe Editor area for explaining and editing the parameters of the currently selected Action in technician language.
+**Add Step**:
+The Recipe Editor area where a Robotics Technician selects a Step type and explicitly clicks Add Step. Step-type selection alone does not mutate the Recipe. Take Image point cloud output is configured here because it describes image input/output creation.
+_Avoid_: Inline action form, hidden auto-add behavior
+
+**Step Configuration**:
+The Recipe Editor area for explaining and editing the parameters of the currently selected Step's Action in technician language. XY coordinates can be edited with number inputs or by selecting the preview image when a section or specific target is active.
 _Avoid_: Raw JSON editor, inline add form, robot command form
 
 **Adapter Preview**:
 The engineering-facing review view for inspecting how vendor-neutral Recipe JSON maps to vendor-specific command plans without executing robot movements.
 _Avoid_: Execution page, technician editor, robot control panel
 
+**Step Model**:
+The public Recipe model: ordered Steps with a Step type and nested Actions. It satisfies the case-study Step language while keeping atomic Actions available for adapter translation and future compound Steps.
+_Avoid_: Action-only model, command schema, vendor payload
+
 **Action Model**:
-The shared data model for all Recipe Actions. It provides a stable envelope for identity and type while allowing each Action type, such as Take Image or Unscrewing, to define its own properties.
-_Avoid_: Step model, command schema, vendor payload
+The nested data model for atomic robot intent. It provides a stable envelope for identity and type while allowing each Action type, such as Take Image or Unscrewing, to define its own parameters.
+_Avoid_: Public recipe sequence, Step List, vendor payload

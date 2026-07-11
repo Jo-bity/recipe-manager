@@ -4,12 +4,13 @@ API-first MVP for creating technician-safe robot recipes, exporting vendor-neutr
 
 ## Normal user flow
 
-1. Create or select a Recipe from the sidebar.
-2. In **Setup**, give the Recipe a clear operational name. Battery layout and process constraint fields are shown as outlook placeholders for future context.
-3. In **Step List**, add the intended robot procedure as ordered Steps, starting with `Take Image` or `Unscrewing`. Each Step has a case-study type and exactly one matching atomic Action in the MVP.
-4. Select a Step and configure its Action in **Step Configuration** using technician-facing groups:
-   - `Take Image`: choose the capture area and whether depth data should be captured as a point cloud.
-   - `Unscrewing`: choose automatic target detection or a specific screw position.
+1. In **Setup**, create or rename the Recipe. Battery layout and process constraint fields are visible as outlook placeholders for future context.
+2. In **Add Step**, choose an available Step type and click **Add Step**. `Take Image` can be created as `2D image only` or `Image + point cloud`; this image output decision belongs to image input, not later Step tuning.
+3. In **Step Configuration**, tune the selected Step's atomic Action:
+   - `Take Image`: choose full-battery capture or a specific section. For a section, set `center.x/y` with the numeric fields or by selecting the preview image.
+   - `Unscrewing`: choose automatic target detection or a specific screw position. For a specific screw, set `target.x/y` with the numeric fields or by selecting the preview image.
+   - Image source and tool profile are shown as Step Configuration outlook fields.
+4. In **Step List**, review the resulting ordered Steps, select a Step for configuration, move Steps up/down, or remove them.
 5. Use **Validate** before exchange or preview to fail fast on incomplete Recipes.
 6. Use **Recipe JSON** to export/import the vendor-neutral Recipe representation.
 7. Use **Adapter Preview** to inspect how the same Recipe maps to Company A or Company B robot commands without executing robot movement.
@@ -73,12 +74,12 @@ Core:
 - Strict validation for `take_image` and `unscrewing` Step types and their nested Action parameters
 - Canonical Recipe JSON import/export
 - Vendor command preview for Company A and Company B
-- Small technician-facing React UI
+- Small technician-facing React UI with Setup, Add Step, Step Configuration, Step List, Recipe JSON, and Adapter Preview views
 
 Outlook:
 
 - Real robot execution
 - Authentication and permissions
-- Rich image annotation
+- Battery layout, process constraints, image source, tool profile, and richer image annotation
 - Execution history and audit logs
 - PostgreSQL deployment hardening
